@@ -1,27 +1,10 @@
 {
-  "name": "talk-to-my-lawyer",
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "devCommand": "npm run dev",
-  "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@supabase_url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-    "OPENAI_API_KEY": "@openai_api_key",
-    "STRIPE_SECRET_KEY": "@stripe_secret_key",
-    "NEXT_STRIPE_PUBLISHABLE_KEY": "@stripe_publishable_key",
-    "CRON_SECRET": "@cron_secret",
-    "NEXT_PUBLIC_APP_URL": "@public_app_url"
-  },
   "regions": ["iad1"],
   "functions": {
     "app/api/**/*": {
