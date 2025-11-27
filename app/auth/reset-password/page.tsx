@@ -135,7 +135,6 @@ export default function ResetPasswordPage() {
                     </Link>
                   </div>
                 </form>
-              )}
             </>
           ) : (
             <div className="text-center space-y-4">
