@@ -22,7 +22,11 @@
       "Bash(supabase db push:*)",
       "Bash(supabase functions deploy:*)",
       "Bash(supabase secrets list:*)",
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(./supabase login:*)",
+      "Bash(./supabase link:*)",
+      "Bash(psql:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []
