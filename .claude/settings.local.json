@@ -34,7 +34,8 @@
       "Bash(https://api.vercel.com/v13/projects )",
       "Bash(https://api.vercel.com/v13/projects/talk-to-my-lawyer/deployments )",
       "Bash(supabase:*)",
-      "Bash(env:*)"
+      "Bash(env:*)",
+      "Bash(docker:*)"
     ],
     "deny": [],
     "ask": []
