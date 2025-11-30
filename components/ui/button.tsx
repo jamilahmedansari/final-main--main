@@ -22,7 +22,11 @@ const buttonVariants = cva(
 
         // ⭐ SPECIAL PRICING BUTTON
         pricing:
-          "bg-white text-[#4600FF] hover:bg-white/90 shadow-sm dark:bg-white dark:text-[#4600FF]"
+          "bg-white text-[#4600FF] hover:bg-white/90 shadow-sm dark:bg-white dark:text-[#4600FF]",
+
+        // ⭐ ENHANCED CTA WITH ANIMATED RUNNING BORDER
+        primary_animated:
+          "btn-enhanced-cta text-white shadow-lg hover:shadow-xl transition-all duration-300"
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
