@@ -98,20 +98,28 @@ export async function POST(request: NextRequest) {
 
         // Record coupon usage
         if (couponCode && subscription) {
+          const couponUsageData = {
+            user_id: metadata.user_id,
+            coupon_code: couponCode,
+            employee_id: employeeId,
+            subscription_id: subscription.id,
+            plan_type: metadata.plan_type || 'unknown',
+            discount_percent: basePrice > 0 ? Math.round((discount / basePrice) * 100) : 0,
+            amount_before: basePrice,
+            amount_after: finalPrice
+          }
+
+          console.log('[StripeWebhook] Recording coupon usage:', couponUsageData)
+
           const { error: usageError } = await supabase
             .from('coupon_usage')
-            .insert({
-              user_id: metadata.user_id,
-              coupon_code: couponCode,
-              employee_id: employeeId,
-              subscription_id: subscription.id,
-              discount_percent: basePrice > 0 ? Math.round((discount / basePrice) * 100) : 0,
-              amount_before: basePrice,
-              amount_after: finalPrice
-            })
+            .insert(couponUsageData)
 
           if (usageError) {
             console.error('[StripeWebhook] Failed to record coupon usage:', usageError)
+            // Don't fail the webhook, but log for monitoring
+          } else {
+            console.log('[StripeWebhook] Coupon usage recorded successfully for code:', couponCode)
           }
         }
 
@@ -136,22 +144,29 @@ export async function POST(request: NextRequest) {
             console.log(`[StripeWebhook] Created commission: $${commissionAmount.toFixed(2)} for employee ${employeeId}`)
           }
 
-          // Update employee coupon usage count
-          if (couponCode) {
+          // Update employee coupon usage count (skip for special promo codes)
+          if (couponCode && couponCode !== 'TALK3') {
             const { data: currentCoupon } = await supabase
               .from('employee_coupons')
-              .select('usage_count')
+              .select('usage_count, employee_id')
               .eq('code', couponCode)
               .maybeSingle()
 
-            if (currentCoupon) {
-              await supabase
+            // Only update usage count if this coupon belongs to the referring employee
+            if (currentCoupon && currentCoupon.employee_id === employeeId) {
+              const { error: updateError } = await supabase
                 .from('employee_coupons')
                 .update({
                   usage_count: (currentCoupon.usage_count || 0) + 1,
                   updated_at: new Date().toISOString()
                 })
                 .eq('code', couponCode)
+
+              if (updateError) {
+                console.error('[StripeWebhook] Failed to update coupon usage count:', updateError)
+              } else {
+                console.log(`[StripeWebhook] Updated usage count for coupon ${couponCode}: ${(currentCoupon.usage_count || 0) + 1}`)
+              }
             }
           }
         }
