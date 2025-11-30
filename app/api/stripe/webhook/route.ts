@@ -60,32 +60,71 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'No metadata' }, { status: 400 })
         }
 
-        // Update subscription status to active
-        const { error: updateError } = await supabase
+        const letters = parseInt(metadata.letters || '0')
+        const finalPrice = parseFloat(metadata.final_price || '0')
+        const basePrice = parseFloat(metadata.base_price || '0')
+        const discount = parseFloat(metadata.discount || '0')
+        const couponCode = metadata.coupon_code || null
+        const employeeId = metadata.employee_id || null
+        const isSuperUserCoupon = metadata.is_super_user_coupon === 'true'
+
+        // Update subscription status to active and set credits
+        const { data: subscription, error: updateError } = await supabase
           .from('subscriptions')
           .update({
             status: 'active',
+            credits_remaining: letters,
+            remaining_letters: letters,
             stripe_session_id: session.id,
             stripe_customer_id: session.customer as string,
             updated_at: new Date().toISOString()
           })
           .eq('user_id', metadata.user_id)
           .eq('status', 'pending')
+          .select()
+          .single()
 
         if (updateError) {
           console.error('[StripeWebhook] Failed to update subscription:', updateError)
         }
 
-        // Create commission if employee referral
-        if (metadata.employee_id && metadata.final_price !== '0') {
-          const commissionAmount = parseFloat(metadata.final_price) * 0.05
+        // Mark user as super user if applicable
+        if (isSuperUserCoupon) {
+          await supabase
+            .from('profiles')
+            .update({ is_super_user: true })
+            .eq('id', metadata.user_id)
+        }
+
+        // Record coupon usage
+        if (couponCode && subscription) {
+          const { error: usageError } = await supabase
+            .from('coupon_usage')
+            .insert({
+              user_id: metadata.user_id,
+              coupon_code: couponCode,
+              employee_id: employeeId,
+              subscription_id: subscription.id,
+              discount_percent: basePrice > 0 ? Math.round((discount / basePrice) * 100) : 0,
+              amount_before: basePrice,
+              amount_after: finalPrice
+            })
+
+          if (usageError) {
+            console.error('[StripeWebhook] Failed to record coupon usage:', usageError)
+          }
+        }
+
+        // Create commission if employee referral (and not a super user coupon with 0 payment)
+        if (employeeId && subscription && finalPrice > 0 && !isSuperUserCoupon) {
+          const commissionAmount = finalPrice * 0.05
 
           const { error: commissionError } = await supabase
             .from('commissions')
             .insert({
-              employee_id: metadata.employee_id,
-              subscription_id: metadata.subscription_id || session.id,
-              subscription_amount: parseFloat(metadata.final_price),
+              employee_id: employeeId,
+              subscription_id: subscription.id,
+              subscription_amount: finalPrice,
               commission_rate: 0.05,
               commission_amount: commissionAmount,
               status: 'pending'
@@ -93,6 +132,27 @@ export async function POST(request: NextRequest) {
 
           if (commissionError) {
             console.error('[StripeWebhook] Failed to create commission:', commissionError)
+          } else {
+            console.log(`[StripeWebhook] Created commission: $${commissionAmount.toFixed(2)} for employee ${employeeId}`)
+          }
+
+          // Update employee coupon usage count
+          if (couponCode) {
+            const { data: currentCoupon } = await supabase
+              .from('employee_coupons')
+              .select('usage_count')
+              .eq('code', couponCode)
+              .maybeSingle()
+
+            if (currentCoupon) {
+              await supabase
+                .from('employee_coupons')
+                .update({
+                  usage_count: (currentCoupon.usage_count || 0) + 1,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('code', couponCode)
+            }
           }
         }
 
