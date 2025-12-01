@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import { createServerClient } from '@supabase/ssr'
+import { verifyAdminSessionFromRequest } from '@/lib/auth/admin-session'
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000 // 15 minutes in milliseconds
@@ -16,16 +17,23 @@ const RATE_LIMIT_MAX_REQUESTS: Record<string, number> = {
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
 
 function getClientId(request: NextRequest): string {
-  // Try to get user ID from auth header for authenticated requests
-  const authHeader = request.headers.get('authorization')
-  if (authHeader?.startsWith('Bearer ')) {
-    return `user:${authHeader.substring(7)}`
+  const forwarded = request.headers.get('x-forwarded-for')
+  const realIP = request.headers.get('x-real-ip')
+  const cfConnectingIP = request.headers.get('cf-connecting-ip')
+
+  if (forwarded) {
+    return forwarded.split(',')[0].trim()
   }
 
-  // Fall back to IP address
-  const forwarded = request.headers.get('x-forwarded-for')
-  const ip = forwarded ? forwarded.split(',')[0] : request.ip || 'unknown'
-  return `ip:${ip}`
+  if (realIP) {
+    return realIP
+  }
+
+  if (cfConnectingIP) {
+    return cfConnectingIP
+  }
+
+  return request.ip || 'unknown'
 }
 
 function isRateLimited(request: NextRequest): { limited: boolean; resetTime?: number; remaining?: number } {
@@ -51,13 +59,14 @@ function isRateLimited(request: NextRequest): { limited: boolean; resetTime?: nu
 
   entry.count++
 
-  // Set expiration to clean up old entries
-  setTimeout(() => {
-    const current = rateLimitStore.get(clientId)
-    if (current && current.resetTime <= now) {
-      rateLimitStore.delete(clientId)
+  // Clean up old entries periodically
+  if (rateLimitStore.size > 10000) {
+    for (const [key, value] of rateLimitStore.entries()) {
+      if (now > value.resetTime) {
+        rateLimitStore.delete(key)
+      }
     }
-  }, RATE_LIMIT_WINDOW + 1000)
+  }
 
   const remaining = Math.max(0, maxRequests - entry.count)
 
@@ -65,6 +74,45 @@ function isRateLimited(request: NextRequest): { limited: boolean; resetTime?: nu
     limited: entry.count > maxRequests,
     resetTime: entry.resetTime,
     remaining
+  }
+}
+
+// ============================================================================
+// SUPABASE SESSION UPDATE
+// ============================================================================
+async function updateSession(request: NextRequest): Promise<NextResponse> {
+  let supabaseResponse = NextResponse.next({ request })
+
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('[Proxy] Missing Supabase environment variables')
+      return supabaseResponse
+    }
+
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    })
+
+    // Refresh the session
+    await supabase.auth.getUser()
+    return supabaseResponse
+  } catch (error) {
+    console.error('[Proxy] Session update error:', error)
+    return supabaseResponse
   }
 }
 
