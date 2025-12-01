@@ -9,16 +9,7 @@
     "start": "next start",
     "commit": "git add -A && git commit -m",
     "push": "git push origin main",
-    "save": "npm run commit -- \"Auto-save: $(date)\" && npm run push",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug",
-    "test:e2e:codegen": "playwright codegen",
-    "test:all": "npm run test:run && npm run test:e2e"
+    "save": "npm run commit -- \"Auto-save: $(date)\" && npm run push"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.71",
