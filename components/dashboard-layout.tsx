@@ -1,9 +1,11 @@
 import { getUser } from '@/lib/auth/get-user'
 import Link from 'next/link'
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import { Button } from './ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { Home, FileText, Plus, CreditCard, DollarSign, Ticket } from 'lucide-react'
+import { DEFAULT_LOGO_ALT, DEFAULT_LOGO_SRC } from '@/lib/constants'
 
 export async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await getUser()
@@ -38,11 +40,14 @@ export async function DashboardLayout({ children }: { children: React.ReactNode 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
+              <Image
+                src={DEFAULT_LOGO_SRC}
+                alt={DEFAULT_LOGO_ALT}
+                width={36}
+                height={36}
+                className="h-9 w-9 rounded-full border border-primary/20 shadow-sm"
+                priority
+              />
               <span className="text-lg font-bold text-foreground">Talk-To-My-Lawyer</span>
             </Link>
             <div className="flex items-center gap-4">

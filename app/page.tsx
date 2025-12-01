@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -44,6 +45,7 @@ import Link from 'next/link'
 import PricingSection from '@/components/ui/pricing-section'
 import { motion, useInView, useScroll, useTransform, useSpring } from 'motion/react'
 import { useRef } from 'react'
+import { DEFAULT_LOGO_ALT, DEFAULT_LOGO_SRC } from '@/lib/constants'
 
 const LETTER_TYPES = [
   { value: 'demand_letter', label: 'Demand Letter', price: 299 },
@@ -179,9 +181,14 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center space-x-3 animate-fade-in">
-                <div className="animate-pulse-scale">
-                  <Scale className="h-8 w-8 text-blue-500" />
-                </div>
+                <Image
+                  src={DEFAULT_LOGO_SRC}
+                  alt={DEFAULT_LOGO_ALT}
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 rounded-full border border-blue-100 shadow-sm"
+                  priority
+                />
                 <span className="text-xl font-bold text-gradient-animated">Talk-To-My-Lawyer</span>
               </div>
               <div className="hidden md:flex items-center space-x-4">

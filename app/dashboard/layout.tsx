@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -26,9 +27,9 @@ import {
   Shield,
   TrendingUp,
   User,
-  ChevronDown,
-  Scale
+  ChevronDown
 } from 'lucide-react'
+import { DEFAULT_LOGO_ALT, DEFAULT_LOGO_SRC } from '@/lib/constants'
 
 export default function DashboardLayout({
   children,
@@ -154,7 +155,14 @@ export default function DashboardLayout({
           {/* Logo */}
           <div className="flex h-16 shrink-0 items-center">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <Scale className="h-8 w-8 text-primary" />
+              <Image
+                src={DEFAULT_LOGO_SRC}
+                alt={DEFAULT_LOGO_ALT}
+                width={36}
+                height={36}
+                className="h-9 w-9 rounded-full border border-primary/20 shadow-sm"
+                priority
+              />
               <span className="text-xl font-bold">Talk-To-My-Lawyer</span>
             </Link>
           </div>
@@ -209,7 +217,14 @@ export default function DashboardLayout({
       <div className="md:hidden">
         <div className="flex items-center justify-between border-b bg-background px-4 py-2">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <Scale className="h-6 w-6 text-primary" />
+            <Image
+              src={DEFAULT_LOGO_SRC}
+              alt={DEFAULT_LOGO_ALT}
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-full border border-primary/20 shadow-sm"
+              priority
+            />
             <span className="text-lg font-bold">TTML</span>
           </Link>
 
@@ -225,7 +240,14 @@ export default function DashboardLayout({
                 {/* Logo */}
                 <div className="flex h-16 shrink-0 items-center">
                   <Link href="/dashboard" className="flex items-center gap-2">
-                    <Scale className="h-8 w-8 text-primary" />
+                    <Image
+                      src={DEFAULT_LOGO_SRC}
+                      alt={DEFAULT_LOGO_ALT}
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 rounded-full border border-primary/20 shadow-sm"
+                      priority
+                    />
                     <span className="text-xl font-bold">Talk-To-My-Lawyer</span>
                   </Link>
                 </div>

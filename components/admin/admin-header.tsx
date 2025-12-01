@@ -1,12 +1,14 @@
 "use client"
 
+import Image from "next/image"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { Scale, Settings, LogOut, User } from "lucide-react"
+import { Settings, LogOut, User } from "lucide-react"
+import { DEFAULT_LOGO_ALT, DEFAULT_LOGO_SRC } from "@/lib/constants"
 
 interface AdminHeaderProps {
   user: {
@@ -30,7 +32,14 @@ export function AdminHeader({ user }: AdminHeaderProps) {
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <Scale className="h-8 w-8 text-blue-600" />
+          <Image
+            src={DEFAULT_LOGO_SRC}
+            alt={DEFAULT_LOGO_ALT}
+            width={36}
+            height={36}
+            className="h-9 w-9 rounded-full border border-blue-100 shadow-sm"
+            priority
+          />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Admin Center</h1>
             <p className="text-sm text-gray-500">Talk-To-My-Lawyer Administration</p>
