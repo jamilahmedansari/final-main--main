@@ -1,13 +1,16 @@
 import React, { useRef, useEffect, useState } from 'react'
-import { motion } from 'motion/react'
+import { motion, type HTMLMotionProps } from 'motion/react'
 import { cn } from '@/lib/utils'
 
-interface AnimatedButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface AnimatedButtonProps {
   children: React.ReactNode
   variant?: 'primary' | 'secondary' | 'blue-border'
   size?: 'sm' | 'md' | 'lg'
   className?: string
   magnetic?: boolean
+  onClick?: () => void
+  disabled?: boolean
+  type?: 'button' | 'submit' | 'reset'
 }
 
 export default function AnimatedButton({
@@ -16,7 +19,9 @@ export default function AnimatedButton({
   size = 'md',
   className,
   magnetic = false,
-  ...props
+  onClick,
+  disabled,
+  type = 'button',
 }: AnimatedButtonProps) {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
@@ -57,6 +62,12 @@ export default function AnimatedButton({
     y: mousePosition.y * 0.1
   } : {}
 
+  const commonMotionProps: HTMLMotionProps<"button"> = {
+    whileHover: { scale: magnetic ? 1.05 : 1.02 },
+    whileTap: { scale: 0.98 },
+    transition: { type: "spring", stiffness: 400, damping: 17 },
+  }
+
   const renderButton = () => {
     switch (variant) {
       case 'blue-border':
@@ -66,20 +77,20 @@ export default function AnimatedButton({
             className={cn(
               "relative overflow-hidden rounded-xl font-semibold transition-all duration-300",
               "text-white shadow-lg hover:shadow-2xl",
-              "bg-gradient-to-r from-blue-600 to-purple-600",
+              "bg-linear-to-r from-blue-600 to-blue-700",
               "hover:scale-105 active:scale-98",
               sizeClasses[size],
               className
             )}
             style={magneticTransform}
-            whileHover={{ scale: magnetic ? 1.05 : 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            {...props}
+            onClick={onClick}
+            disabled={disabled}
+            type={type}
+            {...commonMotionProps}
           >
             {/* Rotating Border Effect */}
             <div className="absolute inset-0 rounded-xl">
-              <div className="absolute inset-0 rounded-xl p-[2px]">
+              <div className="absolute inset-0 rounded-xl p-0.5">
                 <motion.div
                   className="absolute inset-0 rounded-xl opacity-0 hover:opacity-100 transition-opacity duration-300"
                   style={{
@@ -95,7 +106,7 @@ export default function AnimatedButton({
                   }}
                 />
               </div>
-              <div className="absolute inset-[2px] rounded-xl bg-gradient-to-r from-blue-600 to-purple-600" />
+              <div className="absolute inset-0.5 rounded-xl bg-linear-to-r from-blue-600 to-blue-700" />
             </div>
 
             {/* Shimmer Effect */}
@@ -137,13 +148,13 @@ export default function AnimatedButton({
               className
             )}
             style={magneticTransform}
-            whileHover={{ scale: magnetic ? 1.05 : 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            {...props}
+            onClick={onClick}
+            disabled={disabled}
+            type={type}
+            {...commonMotionProps}
           >
             {/* Hover Background */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
+            <div className="absolute inset-0 bg-linear-to-r from-blue-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
 
             {/* Content */}
             <span className="relative z-10 flex items-center justify-center">
@@ -159,21 +170,21 @@ export default function AnimatedButton({
             className={cn(
               "relative overflow-hidden rounded-xl font-semibold transition-all duration-300",
               "text-white shadow-lg hover:shadow-2xl",
-              "bg-gradient-to-r from-blue-600 to-blue-700",
-              "hover:bg-gradient-to-r hover:from-blue-700 hover:to-blue-800",
+              "bg-linear-to-r from-blue-600 to-blue-700",
+              "hover:bg-linear-to-r hover:from-blue-700 hover:to-blue-800",
               "hover:scale-105 active:scale-98",
               sizeClasses[size],
               className
             )}
             style={magneticTransform}
-            whileHover={{ scale: magnetic ? 1.05 : 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            {...props}
+            onClick={onClick}
+            disabled={disabled}
+            type={type}
+            {...commonMotionProps}
           >
             {/* Subtle Glow Effect */}
             <div className="absolute inset-0 rounded-xl opacity-0 hover:opacity-100 transition-opacity duration-300">
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-400 to-purple-400 blur-lg opacity-30" />
+              <div className="absolute inset-0 rounded-xl bg-linear-to-r from-blue-400 to-blue-500 blur-lg opacity-30" />
             </div>
 
             {/* Content */}

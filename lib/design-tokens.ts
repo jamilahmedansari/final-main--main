@@ -10,7 +10,7 @@ export const semanticColors = {
   // Role badges
   role: {
     subscriber: 'bg-primary/10 text-primary',
-    employee: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+    employee: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
     admin: 'bg-destructive/10 text-destructive',
   },
   // Commission status

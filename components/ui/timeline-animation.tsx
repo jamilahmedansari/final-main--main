@@ -6,10 +6,10 @@ import { type RefObject, useEffect, useRef, useState } from "react";
 interface TimelineContentProps {
   children: React.ReactNode;
   animationNum: number;
-  timelineRef: RefObject<HTMLElement>;
+  timelineRef: RefObject<HTMLElement | null>;
   customVariants?: Variants;
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: keyof React.JSX.IntrinsicElements;
 }
 
 export function TimelineContent({

@@ -75,7 +75,7 @@ export default async function AnalyticsPage() {
           
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="text-sm text-slate-600 mb-1">Active Subscriptions</div>
-            <div className="text-3xl font-bold text-purple-600">{activeSubscriptions}</div>
+            <div className="text-3xl font-bold text-blue-600">{activeSubscriptions}</div>
           </div>
         </div>
 
@@ -95,7 +95,7 @@ export default async function AnalyticsPage() {
             </div>
             <div>
               <div className="text-sm text-slate-600 mb-1">Monthly Recurring</div>
-              <div className="text-2xl font-bold text-purple-600">
+              <div className="text-2xl font-bold text-blue-600">
                 ${subscriptions?.filter(s => s.plan === 'monthly').reduce((sum, s) => sum + s.price, 0).toFixed(2) || '0.00'}
               </div>
             </div>

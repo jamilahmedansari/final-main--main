@@ -19,7 +19,16 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+
+  // Initialize Supabase client lazily
+  const getSupabase = () => {
+    try {
+      return createClient()
+    } catch (err) {
+      setError('Application not properly configured. Please contact support.')
+      return null
+    }
+  }
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,6 +43,12 @@ export default function SignUpPage() {
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters')
+      setLoading(false)
+      return
+    }
+
+    const supabase = getSupabase()
+    if (!supabase) {
       setLoading(false)
       return
     }

@@ -1,0 +1,35 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_VERSION = "9"
+
+# Redirects for Next.js app router
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Functions for Next.js API routes
+[functions]
+  directory = "netlify/functions"
+
+# Headers for security and API
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Environment variables (will be set in Netlify dashboard)
+[build.environment.variables]
+  NEXT_PUBLIC_APP_URL = "https://talk-to-my-lawyer.netlify.app"
+  ENABLE_TEST_MODE = "false"
+
+# Edge functions for better performance
+[functions."/api/*"]
+  node_bundler = "esbuild"

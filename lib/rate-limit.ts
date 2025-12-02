@@ -104,8 +104,8 @@ function getClientIP(request: NextRequest): string {
     return cfConnectingIP
   }
 
-  // Fallback to request IP
-  return request.ip || 'unknown'
+  // Fallback to unknown
+  return 'unknown'
 }
 
 // Predefined rate limiters for common use cases

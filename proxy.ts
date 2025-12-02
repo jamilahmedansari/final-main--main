@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from './lib/supabase/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import { createServerClient } from '@supabase/ssr'
+import { verifyAdminSessionFromRequest } from '@/lib/auth/admin-session'
+
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS, POST, PUT, DELETE',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000 // 15 minutes in milliseconds
@@ -17,16 +23,23 @@ const RATE_LIMIT_MAX_REQUESTS: Record<string, number> = {
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
 
 function getClientId(request: NextRequest): string {
-  // Try to get user ID from auth header for authenticated requests
-  const authHeader = request.headers.get('authorization')
-  if (authHeader?.startsWith('Bearer ')) {
-    return `user:${authHeader.substring(7)}`
+  const forwarded = request.headers.get('x-forwarded-for')
+  const realIP = request.headers.get('x-real-ip')
+  const cfConnectingIP = request.headers.get('cf-connecting-ip')
+
+  if (forwarded) {
+    return forwarded.split(',')[0].trim()
   }
 
-  // Fall back to IP address
-  const forwarded = request.headers.get('x-forwarded-for')
-  const ip = forwarded ? forwarded.split(',')[0] : request.ip || 'unknown'
-  return `ip:${ip}`
+  if (realIP) {
+    return realIP
+  }
+
+  if (cfConnectingIP) {
+    return cfConnectingIP
+  }
+
+  return 'unknown'
 }
 
 function isRateLimited(request: NextRequest): { limited: boolean; resetTime?: number; remaining?: number } {
@@ -52,13 +65,14 @@ function isRateLimited(request: NextRequest): { limited: boolean; resetTime?: nu
 
   entry.count++
 
-  // Set expiration to clean up old entries
-  setTimeout(() => {
-    const current = rateLimitStore.get(clientId)
-    if (current && current.resetTime <= now) {
-      rateLimitStore.delete(clientId)
+  // Clean up old entries periodically
+  if (rateLimitStore.size > 10000) {
+    for (const [key, value] of rateLimitStore.entries()) {
+      if (now > value.resetTime) {
+        rateLimitStore.delete(key)
+      }
     }
-  }, RATE_LIMIT_WINDOW + 1000)
+  }
 
   const remaining = Math.max(0, maxRequests - entry.count)
 
@@ -69,36 +83,80 @@ function isRateLimited(request: NextRequest): { limited: boolean; resetTime?: nu
   }
 }
 
+// ============================================================================
+// SUPABASE SESSION UPDATE
+// ============================================================================
+async function updateSession(request: NextRequest): Promise<NextResponse> {
+  let supabaseResponse = NextResponse.next({ request })
+
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('[Proxy] Missing Supabase environment variables')
+      return supabaseResponse
+    }
+
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    })
+
+    // Refresh the session
+    await supabase.auth.getUser()
+    return supabaseResponse
+  } catch (error) {
+    console.error('[Proxy] Session update error:', error)
+    return supabaseResponse
+  }
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = new URL(request.url)
 
-  // Short-circuit CORS preflight requests for API routes
+  // ------------------------------------------
+  // 1. CORS Preflight for API routes
+  // ------------------------------------------
   if (request.method === 'OPTIONS' && pathname.startsWith('/api')) {
-    return new NextResponse(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS, POST, PUT, DELETE',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
-    })
+    return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
   }
 
-  // Skip rate limiting for static assets and Next.js internals
+  // ------------------------------------------
+  // 2. Skip middleware for static assets
+  // ------------------------------------------
   if (
     pathname.startsWith('/_next/') ||
-    pathname.startsWith('/favicon.') ||
+    pathname.startsWith('/static/') ||
     pathname.startsWith('/public/') ||
-    pathname.includes('.')
+    pathname.includes('.') // files with extensions
   ) {
-    return updateSession(request)
+    return NextResponse.next()
   }
 
-  // Apply rate limiting to API routes
+  // ------------------------------------------
+  // 3. Rate limiting for API routes
+  // ------------------------------------------
   if (pathname.startsWith('/api/')) {
     const rateLimitResult = isRateLimited(request)
 
     if (rateLimitResult.limited) {
+      console.warn('[RateLimit] Request blocked:', {
+        path: pathname,
+        clientId: getClientId(request),
+        timestamp: new Date().toISOString()
+      })
+
       const response = NextResponse.json(
         {
           error: 'Too many requests. Please try again later.',
@@ -108,149 +166,166 @@ export async function proxy(request: NextRequest) {
       )
 
       // Add rate limit headers
-      response.headers.set('X-RateLimit-Limit',
-        String(RATE_LIMIT_MAX_REQUESTS[pathname] || RATE_LIMIT_MAX_REQUESTS.default))
+      Object.entries(CORS_HEADERS).forEach(([key, value]) => response.headers.set(key, value))
+      response.headers.set('X-RateLimit-Limit', String(RATE_LIMIT_MAX_REQUESTS[pathname] || RATE_LIMIT_MAX_REQUESTS.default))
       response.headers.set('X-RateLimit-Remaining', '0')
-      response.headers.set('X-RateLimit-Reset',
-        String(Math.ceil(rateLimitResult.resetTime! / 1000)))
-      response.headers.set('Retry-After',
-        String(Math.ceil((rateLimitResult.resetTime! - Date.now()) / 1000)))
-
-      // Log rate limit violation
-      console.warn('[RateLimit] Request blocked:', {
-        path: pathname,
-        clientId: getClientId(request),
-        timestamp: new Date().toISOString()
-      })
-
+      response.headers.set('X-RateLimit-Reset', String(Math.ceil(rateLimitResult.resetTime! / 1000)))
+      response.headers.set('Retry-After', String(Math.ceil((rateLimitResult.resetTime! - Date.now()) / 1000)))
       return response
     }
 
-    // Add rate limit headers for non-blocked requests
+    // For non-blocked API requests, just add headers and continue
     const response = await updateSession(request)
-    response.headers.set('X-RateLimit-Limit',
-      String(RATE_LIMIT_MAX_REQUESTS[pathname] || RATE_LIMIT_MAX_REQUESTS.default))
-    response.headers.set('X-RateLimit-Remaining',
-      String(rateLimitResult.remaining || 0))
-    response.headers.set('X-RateLimit-Reset',
-      String(Math.ceil((rateLimitResult.resetTime || Date.now() + RATE_LIMIT_WINDOW) / 1000)))
+    Object.entries(CORS_HEADERS).forEach(([key, value]) => response.headers.set(key, value))
+    response.headers.set('X-RateLimit-Limit', String(RATE_LIMIT_MAX_REQUESTS[pathname] || RATE_LIMIT_MAX_REQUESTS.default))
+    response.headers.set('X-RateLimit-Remaining', String(rateLimitResult.remaining || 0))
+    response.headers.set('X-RateLimit-Reset', String(Math.ceil((rateLimitResult.resetTime || Date.now() + RATE_LIMIT_WINDOW) / 1000)))
+    return response
+  }
+
+  // ------------------------------------------
+  // 4. Update Supabase session
+  // ------------------------------------------
+  const response = await updateSession(request)
+
+  // ------------------------------------------
+  // 5. Public routes (no auth required)
+  // ------------------------------------------
+  if (pathname === '/' || pathname.startsWith('/auth')) {
+    return response
+  }
+
+  // ------------------------------------------
+  // 6. Get user and profile for protected routes
+  // ------------------------------------------
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return response
+  }
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll() {}, // No-op for reading
+    },
+  })
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let userRole: string | null = null
+  let isSuperUser = false
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, is_super_user')
+      .eq('id', user.id)
+      .single()
+
+    userRole = profile?.role || null
+    isSuperUser = profile?.is_super_user || false
+  }
+
+  // ------------------------------------------
+  // 7. Admin Portal Protection (/secure-admin-gateway)
+  // ------------------------------------------
+  const adminPortalRoute = process.env.ADMIN_PORTAL_ROUTE || 'secure-admin-gateway'
+
+  if (pathname.startsWith(`/${adminPortalRoute}`)) {
+    // Allow login page
+    if (pathname === `/${adminPortalRoute}/login`) {
+      return response
+    }
+
+    // Verify admin session for all other admin portal routes
+    const adminSession = verifyAdminSessionFromRequest(request)
+    if (!adminSession) {
+      const url = new URL(`/${adminPortalRoute}/login`, request.url)
+      return NextResponse.redirect(url)
+    }
+
+    // Super admin route protection
+    const superAdminRoutes = [
+      `/${adminPortalRoute}/dashboard/users`,
+      `/${adminPortalRoute}/dashboard/analytics`,
+      `/${adminPortalRoute}/dashboard/commissions`,
+      `/${adminPortalRoute}/dashboard/all-letters`,
+    ]
+
+    const isSuperAdminRoute = superAdminRoutes.some(route => pathname.startsWith(route))
+
+    if (isSuperAdminRoute) {
+      const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('role, is_super_user')
+        .eq('id', adminSession.userId)
+        .single()
+
+      if (!adminProfile || adminProfile.role !== 'admin' || !adminProfile.is_super_user) {
+        const url = new URL(`/${adminPortalRoute}/review`, request.url)
+        return NextResponse.redirect(url)
+      }
+    }
 
     return response
   }
 
-  // Admin auth middleware
-  if (pathname.startsWith('/secure-admin-gateway') && !pathname.includes('/login')) {
-    const supabase = await createClient()
+  // ------------------------------------------
+  // 8. Block old admin routes
+  // ------------------------------------------
+  if (pathname.startsWith('/dashboard/admin')) {
+    const url = new URL('/dashboard', request.url)
+    return NextResponse.redirect(url)
+  }
 
-    // Get admin session cookie
-    const sessionCookie = request.cookies.get('admin_session')
+  // ------------------------------------------
+  // 9. Dashboard authentication
+  // ------------------------------------------
+  if (!user && pathname.startsWith('/dashboard')) {
+    const url = new URL('/auth/login', request.url)
+    url.searchParams.set('redirectTo', pathname)
+    return NextResponse.redirect(url)
+  }
 
-    if (!sessionCookie) {
-      // Redirect to login
-      const loginUrl = new URL('/secure-admin-gateway/login', request.url)
-      loginUrl.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(loginUrl)
+  // ------------------------------------------
+  // 10. Role-based routing
+  // ------------------------------------------
+  if (user && userRole) {
+    // Employees can't access subscriber routes
+    if (userRole === 'employee') {
+      if (pathname.startsWith('/dashboard/letters') || pathname.startsWith('/dashboard/subscription')) {
+        const url = new URL('/dashboard/commissions', request.url)
+        return NextResponse.redirect(url)
+      }
     }
 
-    try {
-      const session = JSON.parse(sessionCookie.value)
-
-      // Check if session has expired (30 minutes)
-      const now = Date.now()
-      if (now - session.lastActivity > 30 * 60 * 1000) {
-        // Session expired, redirect to login
-        const loginUrl = new URL('/secure-admin-gateway/login', request.url)
-        loginUrl.searchParams.set('redirect', pathname)
-        loginUrl.searchParams.set('expired', 'true')
-
-        const response = NextResponse.redirect(loginUrl)
-        response.cookies.delete('admin_session')
-        return response
+    // Subscribers can't access employee routes
+    if (userRole === 'subscriber') {
+      if (pathname.startsWith('/dashboard/commissions') || pathname.startsWith('/dashboard/coupons')) {
+        const url = new URL('/dashboard/letters', request.url)
+        return NextResponse.redirect(url)
       }
+    }
 
-      // Verify admin role in database
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.userId)
-        .single()
-
-      if (!profile || profile.role !== 'admin') {
-        // Not an admin, redirect to login
-        const loginUrl = new URL('/secure-admin-gateway/login', request.url)
-        loginUrl.searchParams.set('redirect', pathname)
-        return NextResponse.redirect(loginUrl)
+    // Redirect dashboard root based on role
+    if (pathname === '/dashboard') {
+      const url = new URL(request.url)
+      if (userRole === 'admin') {
+        url.pathname = '/dashboard/admin'
+      } else if (userRole === 'employee') {
+        url.pathname = '/dashboard/coupons'
+      } else {
+        url.pathname = '/dashboard/letters'
       }
-
-      // Update last activity
-      session.lastActivity = now
-      const response = await updateSession(request)
-      response.cookies.set('admin_session', JSON.stringify(session), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 1800, // 30 minutes
-        path: '/'
-      })
-
-      return response
-
-    } catch (error) {
-      console.error('[AdminProxy] Error parsing session:', error)
-      const loginUrl = new URL('/secure-admin-gateway/login', request.url)
-      return NextResponse.redirect(loginUrl)
+      return NextResponse.redirect(url)
     }
   }
 
-  // Admin auth middleware for /admin routes
-  if (pathname.startsWith('/admin')) {
-    const supabase = await createClient()
-
-    // Refresh session if possible
-    const { data: { session }, error } = await supabase.auth.getSession()
-
-    if (!session || error) {
-      // Redirect to login
-      const loginUrl = new URL('/auth/login', request.url)
-      loginUrl.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(loginUrl)
-    }
-
-    // Verify admin role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!profile || profile.role !== 'admin') {
-      // Not an admin, redirect with error
-      const dashboardUrl = new URL('/dashboard?error=admin-access-required', request.url)
-      return NextResponse.redirect(dashboardUrl)
-    }
-  }
-
-  // Auth middleware for protected routes
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/api/letters/')) {
-    const supabase = await createClient()
-
-    // Refresh session if possible
-    const { data: { session }, error } = await supabase.auth.getSession()
-
-    if (!session || error) {
-      // Redirect to login for page routes
-      if (pathname.startsWith('/dashboard')) {
-        const loginUrl = new URL('/auth/login', request.url)
-        loginUrl.searchParams.set('redirect', pathname)
-        return NextResponse.redirect(loginUrl)
-      }
-
-      // Return 401 for API routes
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
-
-  return updateSession(request)
+  return response
 }
 
 export const config = {

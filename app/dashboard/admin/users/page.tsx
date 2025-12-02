@@ -24,7 +24,7 @@ export default async function UsersPage() {
 
   const roleColors: Record<string, string> = {
     'subscriber': 'bg-blue-100 text-blue-800',
-    'employee': 'bg-purple-100 text-purple-800',
+    'employee': 'bg-blue-100 text-blue-800',
     'admin': 'bg-red-100 text-red-800'
   }
 
@@ -40,7 +40,7 @@ export default async function UsersPage() {
         </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="text-sm font-medium text-slate-500 mb-2">Employees</div>
-          <div className="text-3xl font-bold text-purple-600">{employees}</div>
+          <div className="text-3xl font-bold text-blue-600">{employees}</div>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="text-sm font-medium text-slate-500 mb-2">Admins</div>

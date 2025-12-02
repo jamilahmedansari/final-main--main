@@ -41,7 +41,7 @@ export default function SuccessMessage() {
   if (!message) return null
 
   const bgColor = type === 'talk3'
-    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
     : type === 'test'
     ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
     : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'

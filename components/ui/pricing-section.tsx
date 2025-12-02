@@ -96,7 +96,7 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
           {selected === "0" && (
             <motion.span
               layoutId={"switch"}
-              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-blue-600 border-blue-600 bg-gradient-to-t from-blue-500 via-blue-400 to-blue-600"
+              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-blue-600 border-blue-600 bg-linear-to-t from-blue-500 via-blue-400 to-blue-600"
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />
           )}
@@ -105,7 +105,7 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
 
         <button
           onClick={() => handleSwitch("1")}
-          className={`relative z-10 w-fit sm:h-12 h-8 flex-shrink-0 rounded-full sm:px-6 px-3 sm:py-2 py-1 font-medium transition-colors ${
+          className={`relative z-10 w-fit sm:h-12 h-8 shrink-0 rounded-full sm:px-6 px-3 sm:py-2 py-1 font-medium transition-colors ${
             selected === "1"
               ? "text-white"
               : "text-muted-foreground hover:text-black"
@@ -114,7 +114,7 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
           {selected === "1" && (
             <motion.span
               layoutId={"switch"}
-              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-blue-600 border-blue-600 bg-gradient-to-t from-blue-500 via-blue-400 to-blue-600"
+              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-blue-600 border-blue-600 bg-linear-to-t from-blue-500 via-blue-400 to-blue-600"
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />
           )}
@@ -132,7 +132,7 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
 
 export default function PricingSection() {
   const [isSubscription, setIsSubscription] = useState(false);
-  const pricingRef = useRef<HTMLDivElement>(null);
+  const pricingRef = useRef<HTMLDivElement | null>(null);
 
   const revealVariants = {
     visible: (i: number) => ({
@@ -155,7 +155,7 @@ export default function PricingSection() {
     setIsSubscription(Number.parseInt(value) === 1);
 
   return (
-    <div className="px-4 py-20 mx-auto relative bg-gradient-to-br from-white via-cyan-50 to-teal-50" ref={pricingRef}>
+    <div className="px-4 py-20 mx-auto relative bg-linear-to-br from-white via-cyan-50 to-teal-50" ref={pricingRef}>
       <div
         className="absolute top-0 left-[10%] right-[10%] w-[80%] h-full z-0"
         style={{
@@ -255,9 +255,9 @@ export default function PricingSection() {
                   <button
                     className={`w-full mb-6 p-4 text-xl rounded-xl transition-all duration-300 ${
                       plan.popular
-                        ? "bg-gradient-to-t from-blue-500 to-blue-600  shadow-lg shadow-blue-500 border border-blue-400 text-white hover:shadow-xl hover:scale-105"
+                        ? "bg-linear-to-t from-blue-500 to-blue-600  shadow-lg shadow-blue-500 border border-blue-400 text-white hover:shadow-xl hover:scale-105"
                         : plan.buttonVariant === "outline"
-                          ? "bg-gradient-to-t from-neutral-900 to-neutral-600  shadow-lg shadow-neutral-900 border border-neutral-700 text-white hover:shadow-xl hover:scale-105"
+                          ? "bg-linear-to-t from-neutral-900 to-neutral-600  shadow-lg shadow-neutral-900 border border-neutral-700 text-white hover:shadow-xl hover:scale-105"
                           : ""
                     }`}
                   >

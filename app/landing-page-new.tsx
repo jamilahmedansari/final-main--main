@@ -328,14 +328,14 @@ export default function NewLandingPage() {
                   title: 'Personal Disputes',
                   desc: 'Neighbor disputes, contract breaches, personal injury claims',
                   price: '$299',
-                  color: 'purple',
+                  color: 'blue',
                 },
                 {
                   icon: Building,
                   title: 'Property Issues',
                   desc: 'Property damage, boundary disputes, easement issues',
                   price: '$299',
-                  color: 'indigo',
+                  color: 'blue',
                 },
                 {
                   icon: Shield,

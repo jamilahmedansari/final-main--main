@@ -148,7 +148,7 @@ export function SubscriptionCard() {
   }
 
   const selectedPlanData = PLANS.find(p => p.id === selectedPlan)
-  const finalPrice = selectedPlanData ? selectedPlanData.price - discount : 0
+  const finalPrice = selectedPlanData ? (selectedPlanData.price ?? 0) - discount : 0
   const isTestMode = process.env.NEXT_PUBLIC_TEST_MODE === 'true'
 
   return (
@@ -191,7 +191,7 @@ export function SubscriptionCard() {
             <ul className="space-y-2">
               {plan.features.map((feature, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
-                  <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-green-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   <span>{feature}</span>
@@ -227,7 +227,7 @@ export function SubscriptionCard() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              {discount >= selectedPlanData?.price ? (
+              {discount >= (selectedPlanData?.price ?? 0) ? (
                 <span className="font-medium">Coupon applied! Your subscription is now FREE</span>
               ) : (
                 <span>Coupon applied! You save ${discount.toFixed(2)}</span>

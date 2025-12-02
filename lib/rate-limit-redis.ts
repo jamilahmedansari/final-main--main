@@ -52,7 +52,7 @@ function getClientIP(request: NextRequest): string {
     return cfConnectingIP
   }
 
-  return request.ip || 'unknown'
+  return 'unknown'
 }
 
 // Helper function to apply rate limiting
@@ -98,10 +98,11 @@ export async function safeApplyRateLimit(
   rateLimiter: Ratelimit | null,
   fallbackLimit: number,
   fallbackWindow: string,
-  identifier?: string
+  identifier?: string,
+  prefixName?: string
 ): Promise<NextResponse | null> {
   const fallbackIdentifier = identifier || getClientIP(request)
-  const fallbackPrefix = rateLimiter?.prefix || 'fallback'
+  const fallbackPrefix = prefixName || 'fallback'
 
   if (!rateLimiter) {
     return applyFallbackRateLimit(fallbackPrefix, fallbackIdentifier, fallbackLimit, fallbackWindow)
@@ -178,5 +179,6 @@ function applyFallbackRateLimit(
 
 // Extend global type for in-memory store
 declare global {
+  // eslint-disable-next-line no-var
   var rateLimitStore: Map<string, { count: number; resetTime: number }> | undefined
 }
