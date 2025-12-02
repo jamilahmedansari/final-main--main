@@ -77,7 +77,7 @@ export default function AnimatedButton({
             className={cn(
               "relative overflow-hidden rounded-xl font-semibold transition-all duration-300",
               "text-white shadow-lg hover:shadow-2xl",
-              "bg-linear-to-r from-blue-600 to-purple-600",
+              "bg-linear-to-r from-blue-600 to-blue-700",
               "hover:scale-105 active:scale-98",
               sizeClasses[size],
               className
@@ -106,7 +106,7 @@ export default function AnimatedButton({
                   }}
                 />
               </div>
-              <div className="absolute inset-0.5 rounded-xl bg-linear-to-r from-blue-600 to-purple-600" />
+              <div className="absolute inset-0.5 rounded-xl bg-linear-to-r from-blue-600 to-blue-700" />
             </div>
 
             {/* Shimmer Effect */}
@@ -154,7 +154,7 @@ export default function AnimatedButton({
             {...commonMotionProps}
           >
             {/* Hover Background */}
-            <div className="absolute inset-0 bg-linear-to-r from-blue-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
+            <div className="absolute inset-0 bg-linear-to-r from-blue-50 to-blue-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
 
             {/* Content */}
             <span className="relative z-10 flex items-center justify-center">
@@ -184,7 +184,7 @@ export default function AnimatedButton({
           >
             {/* Subtle Glow Effect */}
             <div className="absolute inset-0 rounded-xl opacity-0 hover:opacity-100 transition-opacity duration-300">
-              <div className="absolute inset-0 rounded-xl bg-linear-to-r from-blue-400 to-purple-400 blur-lg opacity-30" />
+              <div className="absolute inset-0 rounded-xl bg-linear-to-r from-blue-400 to-blue-500 blur-lg opacity-30" />
             </div>
 
             {/* Content */}

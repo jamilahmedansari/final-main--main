@@ -267,8 +267,8 @@ export default function HomePage() {
 
             {/* Subtle decorative elements */}
             <div className="absolute top-20 left-10 w-32 h-32 bg-blue-500/5 rounded-full blur-xl" />
-            <div className="absolute top-40 right-20 w-40 h-40 bg-purple-500/5 rounded-full blur-xl" />
-            <div className="absolute bottom-20 left-1/4 w-36 h-36 bg-indigo-500/5 rounded-full blur-xl" />
+            <div className="absolute top-40 right-20 w-40 h-40 bg-blue-500/5 rounded-full blur-xl" />
+            <div className="absolute bottom-20 left-1/4 w-36 h-36 bg-blue-400/5 rounded-full blur-xl" />
           </div>
 
           {/* Grid pattern overlay */}
@@ -599,16 +599,16 @@ export default function HomePage() {
                   title: 'Personal Disputes',
                   desc: 'Neighbor disputes, contract breaches, personal injury claims',
                   price: '$299',
-                  color: 'purple',
-                  gradient: 'from-purple-500 to-purple-600',
+                  color: 'blue',
+                  gradient: 'from-blue-500 to-blue-600',
                 },
                 {
                   icon: Building,
                   title: 'Property Issues',
                   desc: 'Property damage, boundary disputes, easement issues',
                   price: '$299',
-                  color: 'indigo',
-                  gradient: 'from-indigo-500 to-indigo-600',
+                  color: 'blue',
+                  gradient: 'from-blue-600 to-blue-700',
                 },
                 {
                   icon: Shield,
