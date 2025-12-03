@@ -1,133 +1,54 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/alpine
+// README at: https://github.com/devcontainers/templates/tree/main/src/javascript-node
 {
-	"name": "Alpine",
+	"name": "Talk-To-My-Lawyer Dev",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/base:alpine-3.20",
+	"image": "mcr.microsoft.com/devcontainers/base:bookworm",
 	"features": {
+		// Git and GitHub CLI
 		"ghcr.io/devcontainers/features/git:1": {
-			"ppa": true,
 			"version": "latest"
 		},
 		"ghcr.io/devcontainers/features/git-lfs:1": {
-			"autoPull": true,
-			"installDirectlyFromGitHubRelease": true,
 			"version": "latest"
 		},
 		"ghcr.io/devcontainers/features/github-cli:1": {
-			"installDirectlyFromGitHubRelease": true,
 			"version": "latest"
 		},
+		// Node.js with pnpm (single source)
 		"ghcr.io/devcontainers/features/node:1": {
-			"nodeGypDependencies": true,
-			"installYarnUsingApt": true,
-			"version": "lts",
-			"pnpmVersion": "latest",
-			"nvmVersion": "latest"
+			"version": "22",
+			"pnpmVersion": "latest"
 		},
-		"ghcr.io/guiyomh/features/vim:0": {},
+		// Editor
 		"ghcr.io/jungaretti/features/vim:1": {},
-		"ghcr.io/joshuanianji/devcontainer-features/github-cli-persistence:1": {},
-		"ghcr.io/jayree/devcontainer-features/npm-registry:1": {
-			"registry": "@SCOPE:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${localEnv:GITHUB_TOKEN}"
-		},
+		// Database
 		"ghcr.io/itsmechlark/features/postgresql:1": {
 			"version": "latest"
 		},
-		"ghcr.io/cirolosapio/devcontainers-features/alpine-node:0": {
-			"corepack": true,
-			"pnpmVersion": "latest"
-		},
-		"ghcr.io/skriptfabrik/devcontainer-features/gitlab-cli:1": {
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/actions-runner:1": {
-			"version": "latest",
-			"dotnetVersion": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/deno:1": {
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/gh-cli:1": {
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/gh-release:1": {
-			"repo": "digitalocean/doctl",
-			"binaryNames": "doctl",
-			"version": "latest",
-			"binLocation": "/usr/local/bin",
-			"libLocation": "/usr/local/lib",
-			"additionalFlags": "--no-filter-assets-by-distro"
-		},
-		"ghcr.io/devcontainers-extra/features/git-lfs:1": {
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/http-server:1": {
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/linode-cli:1": {
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/node-asdf:0": {
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/npm-package:1": {
-			"package": "typescript",
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/npm-packages:1": {
-			"packages": "eslint@9.20.1,nodemon,prettier@3.5.2"
-		},
-		"ghcr.io/devcontainers-extra/features/pnpm:2": {
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/prisma:2": {
-			"version": "latest"
-		},
+		// CLI tools for this project
 		"ghcr.io/devcontainers-extra/features/supabase-cli:1": {
 			"version": "latest"
 		},
 		"ghcr.io/devcontainers-extra/features/vercel-cli:1": {
 			"version": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/vercel-pkg:1": {
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers-extra/features/vercel-release:1": {
-			"version": "latest"
-		},
-		"ghcr.io/martinaskestad/features/vimsrc:1": {
-			"enable_gui": true,
-			"enable_sound": true,
-			"enable_perl": true,
-			"enable_python": true,
-			"enable_python3": true,
-			"enable_ruby": true,
-			"enable_lua": true,
-			"enable_tcl": true,
-			"enable_mzscheme": true
-		},
-		"ghcr.io/davzucky/devcontainers-features-wolfi/node:1": {
-			"installNpm": true,
-			"installYarn": true,
-			"installPnpm": true,
-			"nodeVersion": "20"
-		},
-		"ghcr.io/roul/devcontainer-features/mise-node:1": {}
+		}
+	},
+
+	// Forward the Next.js dev server port
+	"forwardPorts": [3000],
+
+	// Install dependencies after container is created
+	"postCreateCommand": "pnpm install",
+
+	// VS Code extensions for this project
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"dbaeumer.vscode-eslint",
+				"esbenp.prettier-vscode",
+				"bradlc.vscode-tailwindcss"
+			]
+		}
 	}
-
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "uname -a",
-
-	// Configure tool-specific properties.
-	// "customizations": {},
-
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
 }

@@ -67,3 +67,5 @@ vercel-env.json
 *.bak
 *.tmp
 .env.production
+node_modules
+.pnpm-store/
