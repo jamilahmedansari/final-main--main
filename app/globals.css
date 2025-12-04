@@ -9,7 +9,7 @@
   --color-background: #ffffff;
   --color-foreground: #0f172a;
 
-  --color-primary: #2563eb;
+  --color-primary: #199df4;
   --color-primary-foreground: #ffffff;
 
   --color-secondary: #64748b;
@@ -18,7 +18,7 @@
   --color-muted: #f1f5f9;
   --color-muted-foreground: #64748b;
 
-  --color-accent: #3b82f6;
+  --color-accent: #199df4;
   --color-accent-foreground: #ffffff;
 
   --color-destructive: #ef4444;
@@ -32,7 +32,7 @@
 
   --color-border: #e2e8f0;
   --color-input: #e2e8f0;
-  --color-ring: #2563eb;
+  --color-ring: #199df4;
 
   --color-card: #ffffff;
   --color-card-foreground: #0f172a;
@@ -693,8 +693,8 @@ body {
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%);
+    radial-gradient(circle at 20% 80%, rgba(25, 157, 244, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(13, 138, 224, 0.1) 0%, transparent 50%);
   pointer-events: none;
 }
 
@@ -715,9 +715,9 @@ body {
   right: 0;
   bottom: 0;
   background: linear-gradient(90deg,
-    rgba(59, 130, 246, 0.05) 0%,
-    rgba(147, 51, 234, 0.05) 50%,
-    rgba(59, 130, 246, 0.05) 100%);
+    rgba(25, 157, 244, 0.05) 0%,
+    rgba(13, 138, 224, 0.05) 50%,
+    rgba(25, 157, 244, 0.05) 100%);
   pointer-events: none;
 }
 
@@ -727,14 +727,14 @@ body {
 
 .pro-hero h1 {
   background: linear-gradient(135deg,
-    #1e293b 0%,
-    #3b82f6 30%,
-    #8b5cf6 70%,
-    #1e293b 100%);
+    #0a2540 0%,
+    #199df4 30%,
+    #00d4ff 70%,
+    #0a2540 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
+  text-shadow: 0 0 40px rgba(25, 157, 244, 0.3);
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
@@ -755,8 +755,8 @@ body {
 .pro-features .card:hover {
   transform: translateY(-8px) scale(1.02) !important;
   box-shadow:
-    0 32px 64px -12px rgba(59, 130, 246, 0.25),
-    0 16px 32px -8px rgba(147, 51, 234, 0.15) !important;
+    0 32px 64px -12px rgba(25, 157, 244, 0.25),
+    0 16px 32px -8px rgba(13, 138, 224, 0.15) !important;
 }
 
 .pro-pricing {
@@ -777,8 +777,8 @@ body {
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(ellipse at top, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at bottom, rgba(147, 51, 234, 0.05) 0%, transparent 50%);
+    radial-gradient(ellipse at top, rgba(25, 157, 244, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom, rgba(13, 138, 224, 0.05) 0%, transparent 50%);
   pointer-events: none;
 }
 
@@ -794,8 +794,8 @@ body {
 .pro-pricing .card:hover {
   transform: translateY(-12px) !important;
   box-shadow:
-    0 32px 64px -12px rgba(59, 130, 246, 0.35),
-    0 16px 32px -8px rgba(147, 51, 234, 0.25) !important;
+    0 32px 64px -12px rgba(25, 157, 244, 0.35),
+    0 16px 32px -8px rgba(13, 138, 224, 0.25) !important;
 }
 
 .pro-testimonials {
@@ -815,8 +815,8 @@ body {
 .pro-testimonials .card:hover {
   transform: translateY(-6px) rotateZ(-1deg) !important;
   box-shadow:
-    0 20px 25px -5px rgba(59, 130, 246, 0.2),
-    0 10px 10px -5px rgba(147, 51, 234, 0.1) !important;
+    0 20px 25px -5px rgba(25, 157, 244, 0.2),
+    0 10px 10px -5px rgba(13, 138, 224, 0.1) !important;
 }
 
 .pro-footer {
@@ -835,30 +835,30 @@ body {
   height: 1px;
   background: linear-gradient(90deg,
     transparent 0%,
-    rgba(59, 130, 246, 0.3) 50%,
+    rgba(25, 157, 244, 0.3) 50%,
     transparent 100%);
 }
 
 /* Enhanced button styles for pro look */
 .pro-landing .btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  background: linear-gradient(135deg, #199df4 0%, #0d8ae0 100%) !important;
   border: none !important;
   box-shadow:
-    0 10px 25px -5px rgba(59, 130, 246, 0.5),
-    0 4px 6px -2px rgba(59, 130, 246, 0.3) !important;
+    0 10px 25px -5px rgba(25, 157, 244, 0.5),
+    0 4px 6px -2px rgba(25, 157, 244, 0.3) !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .pro-landing .btn-primary:hover {
   transform: translateY(-2px) scale(1.05) !important;
   box-shadow:
-    0 20px 40px -10px rgba(59, 130, 246, 0.6),
-    0 8px 16px -4px rgba(59, 130, 246, 0.4) !important;
+    0 20px 40px -10px rgba(25, 157, 244, 0.6),
+    0 8px 16px -4px rgba(25, 157, 244, 0.4) !important;
 }
 
 /* Enhanced typography */
 .pro-landing .text-gradient {
-  background: linear-gradient(135deg, #1e293b 0%, #3b82f6 50%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #0a2540 0%, #199df4 50%, #00d4ff 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -891,10 +891,10 @@ body {
   padding: 2px;
   background: linear-gradient(
     90deg,
-    #3b82f6,
-    #8b5cf6,
-    #06b6d4,
-    #3b82f6
+    #199df4,
+    #0d8ae0,
+    #00d4ff,
+    #199df4
   );
   border-radius: 0.5rem;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -911,10 +911,10 @@ body {
   inset: 2px;
   background: linear-gradient(
     90deg,
-    #3b82f6,
-    #8b5cf6,
-    #06b6d4,
-    #3b82f6
+    #199df4,
+    #0d8ae0,
+    #00d4ff,
+    #199df4
   );
   border-radius: calc(0.5rem - 2px);
   z-index: -1;
@@ -992,8 +992,8 @@ body {
 .letter-card-enhanced:hover {
   transform: translateY(-8px) scale(1.02);
   box-shadow:
-    0 32px 64px -12px rgba(59, 130, 246, 0.25),
-    0 16px 32px -8px rgba(147, 51, 234, 0.15);
+    0 32px 64px -12px rgba(25, 157, 244, 0.25),
+    0 16px 32px -8px rgba(13, 138, 224, 0.15);
 }
 
 /* Gold accent colors */
@@ -1015,7 +1015,7 @@ body {
 .btn-running-border {
   position: relative !important;
   overflow: hidden !important;
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #0ea5e9 100%) !important;
+  background: linear-gradient(135deg, #0d8ae0 0%, #199df4 50%, #4facfe 100%) !important;
   border: none !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
@@ -1026,13 +1026,13 @@ body {
   inset: -2px;
   background: conic-gradient(
     from 0deg at 50% 50%,
-    #3b82f6 0deg,
-    #2563eb 60deg,
-    #1d4ed8 120deg,
-    #3b82f6 180deg,
-    #60a5fa 240deg,
-    #93c5fd 300deg,
-    #3b82f6 360deg
+    #199df4 0deg,
+    #0d8ae0 60deg,
+    #0066cc 120deg,
+    #199df4 180deg,
+    #4facfe 240deg,
+    #00d4ff 300deg,
+    #199df4 360deg
   );
   border-radius: inherit;
   animation: rotate-border 3s linear infinite;
@@ -1049,14 +1049,14 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #199df4 0%, #0d8ae0 100%);
   border-radius: inherit;
   z-index: -1;
 }
 
 .btn-running-border:hover {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 20px 40px -15px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 20px 40px -15px rgba(25, 157, 244, 0.5);
 }
 
 @keyframes rotate-border {
@@ -1120,7 +1120,7 @@ body {
   inset: -2px;
   background: radial-gradient(
     circle at center,
-    rgba(59, 130, 246, 0.4),
+    rgba(25, 157, 244, 0.4),
     transparent 70%
   );
   border-radius: inherit;
@@ -1137,19 +1137,19 @@ body {
 @keyframes morph-gradient {
   0%, 100% {
     border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    background: linear-gradient(135deg, #199df4, #0d8ae0);
   }
   25% {
     border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
-    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    background: linear-gradient(135deg, #0d8ae0, #4facfe);
   }
   50% {
     border-radius: 70% 30% 50% 50% / 30% 60% 40% 60%;
-    background: linear-gradient(135deg, #1d4ed8, #6d28d9);
+    background: linear-gradient(135deg, #0066cc, #00d4ff);
   }
   75% {
     border-radius: 40% 60% 30% 70% / 60% 40% 70% 30%;
-    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    background: linear-gradient(135deg, #199df4, #4facfe);
   }
 }
 
@@ -1160,7 +1160,7 @@ body {
 /* Typewriter Effect */
 .typewriter {
   overflow: hidden;
-  border-right: 2px solid #3b82f6;
+  border-right: 2px solid #199df4;
   white-space: nowrap;
   animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
 }
@@ -1179,7 +1179,7 @@ body {
     border-color: transparent;
   }
   50% {
-    border-color: #3b82f6;
+    border-color: #199df4;
   }
 }
 

@@ -66,15 +66,15 @@ export default function HeroSection({ onGetStarted, onLearnMore }: HeroSectionPr
   return (
     <section
       ref={containerRef}
-      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-white via-cyan-50/30 to-teal-50/30"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-sky-50/40 to-blue-50/30"
     >
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Gradient Orbs */}
         <motion.div
-          className="absolute w-[600px] h-[600px] rounded-full opacity-20"
+          className="absolute w-[600px] h-[600px] rounded-full opacity-25"
           style={{
-            background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)',
+            background: 'radial-gradient(circle, #199df4 0%, transparent 70%)',
             left: '10%',
             top: '20%',
           }}
@@ -93,7 +93,7 @@ export default function HeroSection({ onGetStarted, onLearnMore }: HeroSectionPr
         <motion.div
           className="absolute w-[500px] h-[500px] rounded-full opacity-20"
           style={{
-            background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)',
+            background: 'radial-gradient(circle, #4facfe 0%, transparent 70%)',
             right: '15%',
             bottom: '20%',
           }}
@@ -113,7 +113,7 @@ export default function HeroSection({ onGetStarted, onLearnMore }: HeroSectionPr
         {mounted && particles.map((particle) => (
           <motion.div
             key={particle.id}
-            className="absolute rounded-full bg-gradient-to-r from-cyan-400 to-teal-400 opacity-40"
+            className="absolute rounded-full bg-gradient-to-r from-[#199df4] to-[#00d4ff] opacity-40"
             style={{
               width: particle.size,
               height: particle.size,
@@ -141,10 +141,10 @@ export default function HeroSection({ onGetStarted, onLearnMore }: HeroSectionPr
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-100 to-teal-100 border border-cyan-200 mb-8"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-sky-100 to-blue-100 border border-[#199df4]/30 mb-8"
         >
-          <Sparkles className="w-4 h-4 text-cyan-600" />
-          <span className="text-sm font-medium text-cyan-700">
+          <Sparkles className="w-4 h-4 text-[#199df4]" />
+          <span className="text-sm font-medium text-[#0d8ae0]">
             AI-Powered Legal Assistance
           </span>
         </motion.div>
@@ -159,7 +159,7 @@ export default function HeroSection({ onGetStarted, onLearnMore }: HeroSectionPr
         >
           Professional Legal Letters
           <br />
-          <span className="bg-gradient-to-r from-cyan-600 to-teal-600 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[#199df4] to-[#00d4ff] bg-clip-text text-transparent">
             Made Simple
           </span>
         </motion.h1>
@@ -187,7 +187,7 @@ export default function HeroSection({ onGetStarted, onLearnMore }: HeroSectionPr
               key={index}
               className="flex items-center gap-2 text-gray-700"
             >
-              <CheckCircle className="w-5 h-5 text-teal-500" />
+              <CheckCircle className="w-5 h-5 text-[#199df4]" />
               <span className="text-sm font-medium">{feature}</span>
             </div>
           ))}
@@ -204,7 +204,7 @@ export default function HeroSection({ onGetStarted, onLearnMore }: HeroSectionPr
           <Button
             onClick={onGetStarted}
             size="lg"
-            className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+            className="bg-gradient-to-r from-[#199df4] to-[#0d8ae0] hover:from-[#0d8ae0] hover:to-[#0066cc] text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
           >
             Get Started Free
             <ArrowRight className="ml-2 w-5 h-5" />
@@ -213,7 +213,7 @@ export default function HeroSection({ onGetStarted, onLearnMore }: HeroSectionPr
             onClick={onLearnMore}
             variant="outline"
             size="lg"
-            className="border-2 border-gray-300 hover:border-cyan-500 px-8 py-6 text-lg font-semibold rounded-xl transition-all duration-300"
+            className="border-2 border-gray-300 hover:border-[#199df4] px-8 py-6 text-lg font-semibold rounded-xl transition-all duration-300"
           >
             Learn More
           </Button>

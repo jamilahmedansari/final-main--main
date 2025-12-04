@@ -172,11 +172,11 @@ export default function HomePage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-cyan-50 to-teal-50 text-gray-900 grid-pattern">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/40 to-blue-50/30 text-gray-900 grid-pattern">
         {/* Navigation Header */}
         <nav
-          className={`glass-card backdrop-blur-lg border-b border-blue-200 sticky top-0 z-50 transition-all duration-300 ${
-            isScrolled ? 'bg-white/95 shadow-lg' : 'bg-white/80'
+          className={`glass-card backdrop-blur-lg border-b border-sky-200/60 sticky top-0 z-50 transition-all duration-300 ${
+            isScrolled ? 'bg-white/95 shadow-lg shadow-sky-100/50' : 'bg-white/80'
           }`}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -196,19 +196,19 @@ export default function HomePage() {
                 <Button
                   variant="ghost"
                   onClick={() => scrollToSection('features')}
-                  className="nav-item text-gray-700 hover:text-blue-600 transition-colors duration-200"
+                  className="nav-item text-gray-700 hover:text-[#199df4] transition-colors duration-200"
                 >
                   Features
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={() => scrollToSection('pricing')}
-                  className="nav-item text-gray-700 hover:text-blue-600 transition-colors duration-200"
+                  className="nav-item text-gray-700 hover:text-[#199df4] transition-colors duration-200"
                 >
                   Pricing
                 </Button>
                 <Link href="/auth/login">
-                  <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                  <Button variant="ghost" className="text-gray-700 hover:text-[#199df4]">
                     Sign In
                   </Button>
                 </Link>
@@ -235,9 +235,9 @@ export default function HomePage() {
           <div className="absolute inset-0 overflow-hidden">
             {/* Large morphing gradient orb */}
             <motion.div
-              className="absolute w-[800px] h-[800px] rounded-full opacity-20 blur-3xl morphing-bg"
+              className="absolute w-[800px] h-[800px] rounded-full opacity-25 blur-3xl morphing-bg"
               style={{
-                background: 'radial-gradient(circle, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%)',
+                background: 'radial-gradient(circle, #199df4 0%, #0d8ae0 40%, #0066cc 100%)',
                 top: '-20%',
                 left: '-10%'
               }}
@@ -256,7 +256,7 @@ export default function HomePage() {
             <motion.div
               className="absolute w-[600px] h-[600px] rounded-full opacity-20 blur-3xl morphing-bg"
               style={{
-                background: 'radial-gradient(circle, #8b5cf6 0%, #ec4899 50%, #3b82f6 100%)',
+                background: 'radial-gradient(circle, #199df4 0%, #4facfe 50%, #00f2fe 100%)',
                 top: '40%',
                 right: '-10%'
               }}
@@ -308,7 +308,7 @@ export default function HomePage() {
               <motion.h1
                 className="text-5xl md:text-7xl font-bold mb-6"
                 style={{
-                  background: 'linear-gradient(135deg, #1e293b 0%, #3b82f6 30%, #8b5cf6 70%, #1e293b 100%)',
+                  background: 'linear-gradient(135deg, #0a2540 0%, #199df4 35%, #00d4ff 65%, #0a2540 100%)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -432,7 +432,7 @@ export default function HomePage() {
                 <Button
                   variant="outline"
                   onClick={() => scrollToSection('letter-types')}
-                  className="px-12 py-5 text-lg font-semibold rounded-xl border-2 border-blue-200 text-blue-600 bg-white/80 backdrop-blur-sm hover:bg-blue-50 hover:border-blue-300 hover:shadow-xl transition-all duration-300 group ripple magnetic-btn"
+                  className="px-12 py-5 text-lg font-semibold rounded-xl border-2 border-[#199df4]/30 text-[#199df4] bg-white/80 backdrop-blur-sm hover:bg-sky-50 hover:border-[#199df4]/50 hover:shadow-xl transition-all duration-300 group ripple magnetic-btn"
                 >
                   <motion.div
                     className="flex items-center"
@@ -510,7 +510,7 @@ export default function HomePage() {
         </section>
 
         {/* Stats Section */}
-        <section className="py-16 bg-gradient-to-r from-cyan-900 to-teal-900 text-white overflow-hidden">
+        <section className="py-16 bg-gradient-to-r from-[#0a2540] via-[#0d3a5c] to-[#0a2540] text-white overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               <div className="scroll-reveal stagger-1 counter-animate">
@@ -553,7 +553,7 @@ export default function HomePage() {
         <section id="letter-types" className="py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
-              <Badge className="bg-blue-100 text-blue-600 mb-4">Most Popular</Badge>
+              <Badge className="bg-sky-100 text-[#199df4] mb-4">Most Popular</Badge>
               <h2 className="text-4xl font-bold mb-4 shiny-text">Professional Legal Letters</h2>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                 Choose from our comprehensive library of lawyer-drafted letter templates. Each
@@ -583,7 +583,7 @@ export default function HomePage() {
                   desc: 'Security deposits, lease violations, habitability issues, and more',
                   price: '$299',
                   color: 'blue',
-                  gradient: 'from-blue-500 to-blue-600',
+                  gradient: 'from-[#199df4] to-[#0d8ae0]',
                 },
                 {
                   icon: Briefcase,
@@ -591,7 +591,7 @@ export default function HomePage() {
                   desc: 'Workplace harassment, wrongful termination, wage disputes',
                   price: '$299',
                   color: 'green',
-                  gradient: 'from-emerald-500 to-green-600',
+                  gradient: 'from-[#00c9a7] to-[#00a383]',
                 },
                 {
                   icon: AlertCircle,
@@ -599,7 +599,7 @@ export default function HomePage() {
                   desc: 'Collect money owed to you from clients, customers, or businesses',
                   price: '$299',
                   color: 'red',
-                  gradient: 'from-rose-500 to-red-600',
+                  gradient: 'from-[#ff6b6b] to-[#ee5a52]',
                 },
                 {
                   icon: Users,
@@ -607,7 +607,7 @@ export default function HomePage() {
                   desc: 'Neighbor disputes, contract breaches, personal injury claims',
                   price: '$299',
                   color: 'blue',
-                  gradient: 'from-blue-500 to-blue-600',
+                  gradient: 'from-[#4facfe] to-[#199df4]',
                 },
                 {
                   icon: Building,
@@ -615,7 +615,7 @@ export default function HomePage() {
                   desc: 'Property damage, boundary disputes, easement issues',
                   price: '$299',
                   color: 'blue',
-                  gradient: 'from-blue-600 to-blue-700',
+                  gradient: 'from-[#0d8ae0] to-[#0066cc]',
                 },
                 {
                   icon: Shield,
@@ -623,7 +623,7 @@ export default function HomePage() {
                   desc: 'Stop harassment, defamation, copyright infringement, and more',
                   price: '$299',
                   color: 'orange',
-                  gradient: 'from-amber-500 to-orange-600',
+                  gradient: 'from-[#ffa726] to-[#ff9800]',
                 },
               ].map((type, index) => (
                 <motion.div
@@ -698,12 +698,12 @@ export default function HomePage() {
                       >
                         <type.icon className="h-7 w-7 text-white" />
                       </motion.div>
-                      <CardTitle className="text-xl font-semibold mb-2 text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
+                      <CardTitle className="text-xl font-semibold mb-2 text-gray-900 group-hover:text-[#199df4] transition-colors duration-300">
                         {type.title}
                       </CardTitle>
                       <CardDescription className="text-gray-600 mb-4 leading-relaxed">{type.desc}</CardDescription>
                       <motion.div
-                        className="text-2xl font-bold text-blue-600"
+                        className="text-2xl font-bold text-[#199df4]"
                         whileHover={{
                           scale: 1.05
                         }}
@@ -765,8 +765,8 @@ export default function HomePage() {
                   className="glass-card card-enhanced laser-border-blue hover:shadow-xl scroll-reveal"
                 >
                   <CardHeader>
-                    <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mb-4 card-icon">
-                      <feature.icon className="h-6 w-6 text-blue-600" />
+                    <div className="w-12 h-12 rounded-lg bg-sky-100 flex items-center justify-center mb-4 card-icon">
+                      <feature.icon className="h-6 w-6 text-[#199df4]" />
                     </div>
                     <CardTitle className="text-xl font-semibold mb-2 text-gradient-animated">
                       {feature.title}
@@ -780,15 +780,15 @@ export default function HomePage() {
         </section>
 
         {/* Footer */}
-        <footer className="bg-gradient-to-r from-cyan-900 to-teal-900 text-white py-16">
+        <footer className="bg-gradient-to-r from-[#0a2540] via-[#0d3a5c] to-[#0a2540] text-white py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <div>
                 <div className="flex items-center space-x-3 mb-4">
-                  <Scale className="h-10 w-10 text-cyan-400" />
+                  <Scale className="h-10 w-10 text-[#199df4]" />
                   <span className="text-2xl font-bold text-white">Talk-To-My-Lawyer</span>
                 </div>
-                <p className="text-cyan-200 mb-4">
+                <p className="text-sky-200 mb-4">
                   Professional legal assistance without the legal bill.
                 </p>
               </div>

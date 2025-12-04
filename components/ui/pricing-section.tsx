@@ -96,7 +96,7 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
           {selected === "0" && (
             <motion.span
               layoutId={"switch"}
-              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-blue-600 border-blue-600 bg-linear-to-t from-blue-500 via-blue-400 to-blue-600"
+              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-[#199df4] border-[#199df4] bg-gradient-to-t from-[#0d8ae0] via-[#199df4] to-[#4facfe]"
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />
           )}
@@ -114,13 +114,13 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
           {selected === "1" && (
             <motion.span
               layoutId={"switch"}
-              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-blue-600 border-blue-600 bg-linear-to-t from-blue-500 via-blue-400 to-blue-600"
+              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-[#199df4] border-[#199df4] bg-gradient-to-t from-[#0d8ae0] via-[#199df4] to-[#4facfe]"
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />
           )}
           <span className="relative flex items-center gap-2">
             Subscription
-            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-black">
+            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-[#0d8ae0]">
               Best Value
             </span>
           </span>
@@ -155,12 +155,12 @@ export default function PricingSection() {
     setIsSubscription(Number.parseInt(value) === 1);
 
   return (
-    <div className="px-4 py-20 mx-auto relative bg-linear-to-br from-white via-cyan-50 to-teal-50" ref={pricingRef}>
+    <div className="px-4 py-20 mx-auto relative bg-gradient-to-br from-slate-50 via-sky-50/40 to-blue-50/30" ref={pricingRef}>
       <div
         className="absolute top-0 left-[10%] right-[10%] w-[80%] h-full z-0"
         style={{
           backgroundImage: `
-        radial-gradient(circle at center, #206ce8 0%, transparent 70%)
+        radial-gradient(circle at center, #199df4 0%, transparent 70%)
       `,
           opacity: 0.3,
           mixBlendMode: "multiply",
@@ -181,7 +181,7 @@ export default function PricingSection() {
             animationNum={1}
             timelineRef={pricingRef}
             customVariants={revealVariants}
-            className="border border-dashed border-blue-500 px-2 py-1 rounded-xl bg-blue-100 capitalize inline-block"
+            className="border border-dashed border-[#199df4] px-2 py-1 rounded-xl bg-sky-100 capitalize inline-block"
           >
             legal needs
           </TimelineContent>
@@ -219,7 +219,7 @@ export default function PricingSection() {
           >
             <Card
               className={`relative border-neutral-200 ${
-                plan.popular ? "ring-2 ring-blue-500 bg-blue-50" : "bg-white "
+                plan.popular ? "ring-2 ring-[#199df4] bg-sky-50" : "bg-white "
               }`}
             >
               <CardHeader className="text-left">
@@ -229,7 +229,7 @@ export default function PricingSection() {
                   </h3>
                   {plan.popular && (
                     <div className="">
-                      <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                      <span className="bg-[#199df4] text-white px-3 py-1 rounded-full text-sm font-medium">
                         Popular
                       </span>
                     </div>
@@ -255,7 +255,7 @@ export default function PricingSection() {
                   <button
                     className={`w-full mb-6 p-4 text-xl rounded-xl transition-all duration-300 ${
                       plan.popular
-                        ? "bg-linear-to-t from-blue-500 to-blue-600  shadow-lg shadow-blue-500 border border-blue-400 text-white hover:shadow-xl hover:scale-105"
+                        ? "bg-gradient-to-t from-[#0d8ae0] to-[#199df4] shadow-lg shadow-[#199df4]/40 border border-[#4facfe] text-white hover:shadow-xl hover:scale-105"
                         : plan.buttonVariant === "outline"
                           ? "bg-linear-to-t from-neutral-900 to-neutral-600  shadow-lg shadow-neutral-900 border border-neutral-700 text-white hover:shadow-xl hover:scale-105"
                           : ""
@@ -284,8 +284,8 @@ export default function PricingSection() {
                   <ul className="space-y-2 font-semibold">
                     {plan.includes.slice(1).map((feature, featureIndex) => (
                       <li key={featureIndex} className="flex items-center">
-                        <span className="h-6 w-6 bg-green-50 border border-blue-500 rounded-full grid place-content-center mt-0.5 mr-3">
-                          <CheckCheck className="h-4 w-4 text-blue-500 " />
+                        <span className="h-6 w-6 bg-sky-50 border border-[#199df4] rounded-full grid place-content-center mt-0.5 mr-3">
+                          <CheckCheck className="h-4 w-4 text-[#199df4] " />
                         </span>
                         <span className="text-sm text-gray-600">{feature}</span>
                       </li>
