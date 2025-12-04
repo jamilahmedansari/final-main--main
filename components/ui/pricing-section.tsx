@@ -1,6 +1,7 @@
 "use client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TimelineContent } from "@/components/ui/timeline-animation";
+import { TextMorph } from "@/components/ui/text-morph";
 import NumberFlow from "@number-flow/react";
 import { FileText, CheckCheck, Scale, Zap } from "lucide-react";
 import { motion } from "motion/react";
@@ -183,7 +184,10 @@ export default function PricingSection() {
             customVariants={revealVariants}
             className="border border-dashed border-[#199df4] px-2 py-1 rounded-xl bg-sky-100 capitalize inline-block"
           >
-            legal needs
+            <TextMorph 
+              words={["Legal Needs", "Lawyer Letter", "Attorney Reviewed"]} 
+              interval={3000}
+            />
           </TimelineContent>
         </TimelineContent>
 
