@@ -2,6 +2,14 @@ import { getUser } from '@/lib/auth/get-user'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DashboardLayout } from '@/components/dashboard-layout'
+import type { Database } from '@/lib/database.types'
+
+type EmployeeStats = {
+  employeeId: string
+  fullName: string | null
+  totalCommission: number
+  couponCount: number
+}
 
 export default async function AnalyticsPage() {
   const { profile } = await getUser()
@@ -33,22 +41,25 @@ export default async function AnalyticsPage() {
   const activeSubscriptions = subscriptions?.length || 0
 
   // Calculate employee performance
-  const employeeStats = topEmployees?.reduce((acc: any, comm: any) => {
+  const employeeStats = topEmployees?.reduce((acc: Record<string, EmployeeStats>, comm: Database['public']['Tables']['commissions']['Row'] & {
+    profiles: { full_name: string | null } | null
+  }) => {
     const empId = comm.employee_id
     if (!acc[empId]) {
       acc[empId] = {
-        name: comm.profiles?.full_name || 'Unknown',
+        employeeId: empId,
+        fullName: comm.profiles?.full_name || 'Unknown',
         totalCommission: 0,
-        count: 0
+        couponCount: 0
       }
     }
     acc[empId].totalCommission += comm.commission_amount || 0
-    acc[empId].count += 1
+    acc[empId].couponCount += 1
     return acc
   }, {})
 
   const topPerformers = Object.values(employeeStats || {})
-    .sort((a: any, b: any) => b.totalCommission - a.totalCommission)
+    .sort((a: EmployeeStats, b: EmployeeStats) => b.totalCommission - a.totalCommission)
     .slice(0, 5)
 
   return (

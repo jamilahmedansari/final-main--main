@@ -2,6 +2,18 @@ import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Letter } from "@/lib/types/api"
+import type { Database } from "@/lib/database.types"
+
+type LetterWithProfile = {
+  id: string
+  title: string | null
+  status: Database['public']['Tables']['letters']['Row']['status']
+  created_at: string
+  profiles: {
+    email: string | null
+  }
+}
 import {
   Mail,
   Users,
@@ -163,7 +175,7 @@ export default async function AdminDashboard() {
           <CardContent>
             {recentLetters && recentLetters.length > 0 ? (
               <div className="space-y-3">
-                {recentLetters.map((letter: any) => (
+                {recentLetters.map((letter: LetterWithProfile) => (
                   <div key={letter.id} className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-sm font-medium truncate">{letter.title}</p>

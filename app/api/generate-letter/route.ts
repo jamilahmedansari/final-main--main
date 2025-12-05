@@ -32,22 +32,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only subscribers can generate letters" }, { status: 403 })
     }
 
-    // 3. Subscription & Limit Check
-    // Check if user has generated any letters before (Free Trial Check)
-    const { count } = await supabase.from("letters").select("*", { count: "exact", head: true }).eq("user_id", user.id)
+    // 3. Subscription & Limit Check - Use database function for atomic check
+    // This prevents race conditions by using a single atomic database call
+    const { data: allowance, error: allowanceError } = await supabase.rpc("check_letter_allowance", {
+      u_id: user.id,
+    })
 
-    const isFreeTrial = (count || 0) === 0
+    if (allowanceError) {
+      console.error("[GenerateLetter] Error checking allowance:", allowanceError)
+      return NextResponse.json({ error: "Failed to check letter allowance" }, { status: 500 })
+    }
 
-    // If not free trial, ensure active subscription has credits available before generating
-    if (!isFreeTrial) {
-      const { data: subscription } = await supabase
-        .from("subscriptions")
-        .select("credits_remaining, status")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .single()
+    // Check if this is their first letter ever (free trial) - must be 0 total letters
+    const { count: totalLetterCount } = await supabase
+      .from("letters")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .not("status", "eq", "failed") // Don't count failed attempts
 
-      if (!subscription || (subscription.credits_remaining || 0) <= 0) {
+    const isFreeTrial = (totalLetterCount || 0) === 0 && !allowance?.is_super
+
+    // If not free trial and not super user, check credits
+    if (!isFreeTrial && !allowance?.is_super) {
+      if (!allowance?.has_allowance || (allowance?.remaining || 0) <= 0) {
         return NextResponse.json(
           {
             error: "No letter credits remaining. Please upgrade your plan.",
