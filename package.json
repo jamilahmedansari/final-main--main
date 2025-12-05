@@ -12,7 +12,6 @@
     "save": "npm run commit -- \"Auto-save: $(date)\" && npm run push"
   },
   "dependencies": {
-    "@ai-sdk/gateway": "^2.0.18",
     "@ai-sdk/openai": "^2.0.71",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
