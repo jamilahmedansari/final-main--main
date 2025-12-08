@@ -1,4 +1,5 @@
 -- Fix check_letter_allowance to use correct column name (remaining_letters instead of credits_remaining)
+DROP FUNCTION IF EXISTS public.check_letter_allowance(UUID);
 CREATE OR REPLACE FUNCTION public.check_letter_allowance(u_id UUID)
 RETURNS TABLE(has_allowance BOOLEAN, remaining INTEGER, plan_name TEXT, is_super BOOLEAN)
 LANGUAGE plpgsql
