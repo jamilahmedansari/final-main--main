@@ -4,5 +4,7 @@
     "terminal.integrated.copyOnSelection": true,
     "terminal.integrated.env.osx": {
         
-    }
+    },
+    "workbench.colorTheme": "GitHub Dark High Contrast",
+    "editor.autoClosingBrackets": "languageDefined"
 }
