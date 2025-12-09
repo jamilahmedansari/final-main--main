@@ -5,6 +5,7 @@
     "terminal.integrated.env.osx": {
         
     },
-    "workbench.colorTheme": "GitHub Dark High Contrast",
-    "editor.autoClosingBrackets": "languageDefined"
+    "workbench.colorTheme": "Default Light Modern",
+    "editor.autoClosingBrackets": "languageDefined",
+    "DockerRun.DisableDockerrc": true
 }
