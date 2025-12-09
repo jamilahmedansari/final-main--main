@@ -13,6 +13,13 @@ echo "🚀 Starting Talk-To-My-Lawyer development environment..."
 echo ""
 
 # -----------------------------------------------------------------------------
+# 0. Fix Docker permissions (runs every start to ensure access)
+# -----------------------------------------------------------------------------
+if [ -S /var/run/docker.sock ]; then
+    sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
+fi
+
+# -----------------------------------------------------------------------------
 # 1. Source shell integration (CRITICAL for VS Code)
 # -----------------------------------------------------------------------------
 if [ -f ~/.bashrc ]; then
@@ -27,7 +34,6 @@ if [ -n "$AVAILABLE" ] && [ "$AVAILABLE" -lt 2000000 ]; then
     echo "⚠️  WARNING: Low disk space! Run 'cleanup' to free space."
     echo ""
 fi
-
 # -----------------------------------------------------------------------------
 # 3. Ensure node_modules exists
 # -----------------------------------------------------------------------------

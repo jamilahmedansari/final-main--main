@@ -11,7 +11,23 @@ echo "🚀 Setting up Talk-To-My-Lawyer development environment..."
 echo "📦 Storage-optimized configuration with all features"
 
 # -----------------------------------------------------------------------------
-# 0. Storage Cleanup - Remove unnecessary files FIRST
+# 0. Fix Docker permissions FIRST
+# -----------------------------------------------------------------------------
+echo "🐳 Configuring Docker permissions..."
+
+# Add current user to docker group (fixes "permission denied" error)
+if getent group docker > /dev/null 2>&1; then
+    sudo usermod -aG docker $(whoami) 2>/dev/null || true
+    echo "✅ Added user to docker group"
+fi
+
+# Fix docker socket permissions
+if [ -S /var/run/docker.sock ]; then
+    sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
+fi
+
+# -----------------------------------------------------------------------------
+# 1. Storage Cleanup - Remove unnecessary files
 # -----------------------------------------------------------------------------
 echo "🧹 Cleaning up unnecessary files for storage optimization..."
 
@@ -27,7 +43,7 @@ rm -rf .next 2>/dev/null || true
 rm -rf node_modules/.cache 2>/dev/null || true
 
 # -----------------------------------------------------------------------------
-# 1. Shell Integration Setup (CRITICAL for VS Code command detection)
+# 2. Shell Integration Setup (CRITICAL for VS Code command detection)
 # -----------------------------------------------------------------------------
 echo "📝 Configuring shell integration..."
 
