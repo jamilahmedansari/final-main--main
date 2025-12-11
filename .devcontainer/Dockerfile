@@ -48,6 +48,13 @@ RUN curl -s https://packages.stripe.dev/api/security/keypair/stripe-cli-gpg/publ
     && apt-get install -y stripe \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Docker CLI (for Docker-outside-of-Docker)
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian bookworm stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y docker-ce-cli docker-compose-plugin \
+    && rm -rf /var/lib/apt/lists/*
+
 # Update npm to latest version
 RUN npm install -g npm@latest
 
@@ -60,9 +67,11 @@ RUN npm install -g vercel@latest
 # Install Netlify CLI
 RUN npm install -g netlify-cli@latest
 
-# Create non-root user with sudo access
-RUN useradd -m -s /bin/bash developer \
-    && echo "developer ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+# Create non-root user with sudo access and docker group
+RUN groupadd -g 999 docker || true \
+    && useradd -m -s /bin/bash developer \
+    && echo "developer ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+    && usermod -aG docker developer
 
 # Set up pnpm store directory
 RUN mkdir -p /home/developer/.local/share/pnpm \

@@ -18,6 +18,8 @@ services:
       - pnpm_store:/home/developer/.local/share/pnpm
       # Persist bash history
       - bash_history:/home/developer/.bash_history
+      # Docker-outside-of-Docker: Mount host Docker socket
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "3000:3000"   # Next.js dev server
       - "54321:54321" # Supabase Studio
