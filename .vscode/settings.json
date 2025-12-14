@@ -1,8 +1,0 @@
-{
-    "deno.enable": true,
-    "chatgpt.openOnStartup": false,
-    "terminal.integrated.copyOnSelection": true,
-    "terminal.integrated.env.osx": {
-        
-    }
-}
