@@ -17,6 +17,11 @@ services:
       - pnpm_store:/home/node/.local/share/pnpm
       # Persist bash history
       - bash_history:/home/node/bash_history_vol
+      # Persist CLI auth data
+      - vercel_auth:/home/node/.local/share/com.vercel.cli
+      - gh_auth:/home/node/.config/gh
+      - supabase_auth:/home/node/.config/supabase
+      - stripe_auth:/home/node/.config/stripe
       # Docker-outside-of-Docker: Mount host Docker socket
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
@@ -37,3 +42,7 @@ volumes:
   node_modules:
   pnpm_store:
   bash_history:
+  vercel_auth:
+  gh_auth:
+  supabase_auth:
+  stripe_auth:

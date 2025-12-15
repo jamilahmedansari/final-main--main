@@ -78,7 +78,12 @@ RUN npm install -g npm@latest pnpm@latest vercel@latest netlify-cli@latest
 RUN mkdir -p /workspace \
   && chown -R node:node /workspace \
   && mkdir -p /home/node/.local/share/pnpm \
+  && mkdir -p /home/node/.local/share/com.vercel.cli \
+  && mkdir -p /home/node/.config/gh \
+  && mkdir -p /home/node/.config/supabase \
+  && mkdir -p /home/node/.config/stripe \
   && chown -R node:node /home/node/.local \
+  && chown -R node:node /home/node/.config \
   && echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node \
   && chmod 0440 /etc/sudoers.d/node
 
