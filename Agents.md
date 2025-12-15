@@ -1,13 +1,13 @@
 # Agents.md - Verification & Testing Guide
 
-> Instructions for automated agents to verify Talk-To-My-Lawyer functionality.
+> Instructions for automated agents to verify Talk-To-My-Lawyer functionality.  
 > For full architecture, see consolidated documentation in project root.
 
 ---
 
 ## Quick Context
 
-**App**: AI-powered legal letter SaaS with mandatory attorney review.
+**App**: AI-powered legal letter SaaS with mandatory attorney review.  
 **Stack**: Next.js 16 (App Router) | Supabase (Postgres + RLS) | OpenAI | Stripe | pnpm
 
 ```
@@ -26,14 +26,26 @@ User → Letter Form → AI Draft (GPT-4 Turbo) → Admin Review → PDF Downloa
 | `employee`   | Own coupons, commissions               | **ANY letter content**          |
 | `admin`      | Everything via `/secure-admin-gateway` | N/A                             |
 
-### Admin Model
+### Single Admin Model (Critical)
 
-```
-⚠️ Single Admin Model: There is exactly ONE admin account.
-- For subscribers: `is_super_user` flag grants unlimited letter allowances (business feature).
-- For employees: `is_super_user` flag is not used.
-Verify: Admin portal access is via `/secure-admin-gateway` with email/password + portal key.
-```
+There is **exactly ONE admin account** in the system.
+
+This **single admin** is responsible for:
+
+- Reviewing every submitted letter in the **Review Center**
+- **Editing/improving** letter content (including via AI assist)
+- **Approving or rejecting** letters
+- Monitoring **dashboard analytics**, including:
+  - Letters generated / submitted / approved / rejected
+  - Employee coupon code usage and discount impact
+  - Employee commission totals and related metrics
+
+> ⚠️ `is_super_user` = unlimited letters (subscriber business feature), **NOT** admin privilege.
+
+**Admin portal access rules**
+
+- Admin access is **only** via `/secure-admin-gateway/*` using **email/password + portal key** (env-based).
+- There is **no public admin signup** and no multi-admin model.
 
 ---
 
@@ -54,7 +66,7 @@ draft → generating → pending_review → under_review → approved/rejected �
 
 - [ ] Letter form submission creates record with `draft` status
 - [ ] AI generation updates to `generating` then `pending_review`
-- [ ] Admin review updates to `under_review`
+- [ ] Single admin starts review → updates to `under_review`
 - [ ] Approval/rejection logged via `log_letter_audit()`
 - [ ] Subscriber sees content ONLY after approval
 
@@ -77,14 +89,17 @@ draft → generating → pending_review → under_review → approved/rejected �
 - [ ] Coupon applies 20% discount
 - [ ] Commission: 5% of subscription amount
 - [ ] Employee dashboard shows usage stats
+- [ ] Verify employees cannot view letters or letter content (RLS + UI + API)
 
-### 5. Admin Portal
+### 5. Admin Portal (Single Admin)
 
 - [ ] Access: `/secure-admin-gateway/login`
 - [ ] Auth: Email + Password + Portal Key (env-based)
 - [ ] Session: 30-minute timeout
-- [ ] Review queue shows `pending_review` letters
-- [ ] Can approve, reject, or improve with AI
+- [ ] Dashboard includes:
+  - [ ] **Review Center** / queue for `pending_review` letters
+  - [ ] Letter review actions: edit/improve, approve, reject
+  - [ ] **Analytics** for letters and employee systems (coupons + commissions)
 
 ---
 
@@ -119,17 +134,17 @@ draft → generating → pending_review → under_review → approved/rejected �
 - `/admin/*` - admin-only UI (Supabase `profiles.role = 'admin'`)
 - `/dashboard/admin/*` - legacy admin UI (blocked/redirected by middleware)
 
-**Secure Admin Portal (separate portal session)**
+**Secure Admin Portal (separate portal session; SINGLE ADMIN)**
 
 - `/secure-admin-gateway` - portal entry (redirects to login/dashboard based on portal session)
 - `/secure-admin-gateway/login` - portal login (email/password + portal key)
-- `/secure-admin-gateway/dashboard` - portal dashboard (all admins)
-- `/secure-admin-gateway/review` - review center / queue (all admins)
-- `/secure-admin-gateway/review/[id]` - review a letter (all admins)
-- `/secure-admin-gateway/dashboard/letters` - review queue list (all admins)
-- `/secure-admin-gateway/dashboard/analytics` - analytics (admin only)
-- `/secure-admin-gateway/dashboard/commissions` - commissions (admin only)
-- `/secure-admin-gateway/dashboard/all-letters` - all letters (admin only)
+- `/secure-admin-gateway/dashboard` - **single admin** dashboard (includes analytics + review center entry points)
+- `/secure-admin-gateway/review` - review center / queue
+- `/secure-admin-gateway/review/[id]` - review/edit/approve/reject a letter
+- `/secure-admin-gateway/dashboard/letters` - review queue list
+- `/secure-admin-gateway/dashboard/analytics` - analytics (letters + employee coupons + commissions)
+- `/secure-admin-gateway/dashboard/commissions` - commissions analytics
+- `/secure-admin-gateway/dashboard/all-letters` - all letters
 
 ### API Endpoints
 
@@ -156,15 +171,15 @@ draft → generating → pending_review → under_review → approved/rejected �
 - `POST /api/letters/[id]/send-email` - email an approved/completed letter PDF (subscriber owner)
 - `GET /api/letters/[id]/pdf` - download approved letter PDF (subscriber owner; admins)
 
-**Admin / Review workflows**
+**Admin / Review workflows (admin portal session)**
 
 - `POST /api/letters/improve` - AI improve helper (admin - Supabase role)
 - `GET /api/letters/[id]/audit` - letter audit trail (INTENDED: admin-only; employee must not access letter data)
-- `POST /api/letters/[id]/start-review` - set `under_review` (admin portal session)
-- `POST /api/letters/[id]/approve` - approve + store final content (admin portal session)
-- `POST /api/letters/[id]/reject` - reject with reason (admin portal session)
-- `POST /api/letters/[id]/improve` - AI improve helper for review (admin portal session)
-- `POST /api/letters/[id]/complete` - mark approved letter completed (admin portal session)
+- `POST /api/letters/[id]/start-review` - set `under_review`
+- `POST /api/letters/[id]/approve` - approve + store final content
+- `POST /api/letters/[id]/reject` - reject with reason
+- `POST /api/letters/[id]/improve` - AI improve helper for review
+- `POST /api/letters/[id]/complete` - mark approved letter completed
 
 **Admin portal auth**
 
@@ -240,7 +255,7 @@ pnpm lint       # ESLint passes
 2. Create letter (first is free)
 3. Verify AI draft generated
 4. Verify letter shows "Under Review" (content hidden)
-5. As admin: approve letter
+5. As the single admin: review/edit as needed, then approve letter
 6. Verify subscriber can now see content and download PDF
 
 ### Test 2: Employee Commission
@@ -261,17 +276,17 @@ pnpm lint       # ESLint passes
 
 ## Safe Auto-Fixes (Agents May Perform)
 
-✅ Install missing dependencies
-✅ Fix obvious import errors
-✅ Add missing TypeScript types
+✅ Install missing dependencies  
+✅ Fix obvious import errors  
+✅ Add missing TypeScript types  
 ✅ Update deprecated API calls (if migration is documented)
 
 ---
 
 ## Do NOT Auto-Fix
 
-❌ Change role semantics
-❌ Bypass RLS policies
-❌ Modify database schema without migration script
-❌ Create new routes or flows not in codebase
+❌ Change role semantics  
+❌ Bypass RLS policies  
+❌ Modify database schema without migration script  
+❌ Create new routes or flows not in codebase  
 ❌ Expose or log secrets
