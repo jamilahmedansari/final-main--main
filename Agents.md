@@ -20,13 +20,14 @@ User → Letter Form → AI Draft (GPT-4 Turbo) → Admin Review → PDF Downloa
 
 ### Three Roles (Verify RLS Enforces These)
 
-| Role | Can Access | CANNOT Access |
-|------|-----------|---------------|
-| `subscriber` | Own letters, subscription, profile | Other users' data, admin portal |
-| `employee` | Own coupons, commissions | **ANY letter content** |
-| `admin` | Everything via `/secure-admin-gateway` | N/A |
+| Role         | Can Access                             | CANNOT Access                   |
+| ------------ | -------------------------------------- | ------------------------------- |
+| `subscriber` | Own letters, subscription, profile     | Other users' data, admin portal |
+| `employee`   | Own coupons, commissions               | **ANY letter content**          |
+| `admin`      | Everything via `/secure-admin-gateway` | N/A                             |
 
 ### is_super_user Verification
+
 ```
 ⚠️ profiles.is_super_user = UNLIMITED LETTERS, NOT admin privilege
 Verify: No code treats is_super_user as admin access flag
@@ -57,12 +58,12 @@ draft → generating → pending_review → under_review → approved/rejected �
 
 ### 3. Subscription & Credits
 
-| Plan | Price | Credits |
-|------|-------|---------|
-| Free Trial | $0 | 1 (first letter) |
-| Single | $299 | 1 |
-| Monthly | $299/mo | 4 |
-| Yearly | $599/yr | 8 |
+| Plan       | Price   | Credits          |
+| ---------- | ------- | ---------------- |
+| Free Trial | $0      | 1 (first letter) |
+| Single     | $299    | 1                |
+| Monthly    | $299/mo | 4                |
+| Yearly     | $599/yr | 8                |
 
 - [ ] Free trial: `count === 0` check works
 - [ ] Credits deducted via `deduct_letter_allowance(u_id)`
@@ -82,6 +83,97 @@ draft → generating → pending_review → under_review → approved/rejected �
 - [ ] Session: 30-minute timeout
 - [ ] Review queue shows `pending_review` letters
 - [ ] Can approve, reject, or improve with AI
+
+---
+
+## Routes & Endpoints Reference (Purpose + Role)
+
+### UI Pages
+
+**Public**
+
+- `/` - marketing/landing (redirects signed-in users by role)
+- `/auth/login` - sign in
+- `/auth/signup` - sign up
+- `/auth/check-email` - post-signup / post-reset email sent
+- `/auth/forgot-password` - request password reset
+- `/auth/reset-password` - set new password (via Supabase reset session)
+
+**Authenticated (role-based under /dashboard)**
+
+- `/dashboard` - main dashboard (redirects by role)
+- `/dashboard/letters` - subscriber letters list (employees redirected away)
+- `/dashboard/letters/new` - create letter intake (subscriber)
+- `/dashboard/letters/[id]` - letter detail (subscriber owner; admins may view)
+- `/dashboard/subscription` - subscription/credits (subscriber)
+- `/dashboard/settings` - settings (intended subscriber)
+- `/dashboard/commissions` - commissions (employee; admins may view)
+- `/dashboard/coupons` - coupons (employee; admins may view)
+- `/dashboard/employee-settings` - employee settings (intended employee)
+- `/dashboard/admin-settings` - admin settings (intended admin)
+
+**Legacy/Alternate Admin UIs**
+
+- `/admin/*` - admin-only UI (Supabase `profiles.role = 'admin'`)
+- `/dashboard/admin/*` - legacy admin UI (blocked/redirected by middleware)
+
+**Secure Admin Portal (separate portal session)**
+
+- `/secure-admin-gateway/login` - portal login (email/password + portal key)
+- `/secure-admin-gateway/dashboard` - portal dashboard (all admins)
+- `/secure-admin-gateway/review` - review center / queue (all admins)
+- `/secure-admin-gateway/review/[id]` - review a letter (all admins)
+- `/secure-admin-gateway/dashboard/letters` - review queue list (all admins)
+- `/secure-admin-gateway/dashboard/users` - user management (super admin only)
+- `/secure-admin-gateway/dashboard/analytics` - analytics (super admin only)
+- `/secure-admin-gateway/dashboard/commissions` - commissions admin (super admin only)
+- `/secure-admin-gateway/dashboard/all-letters` - all letters (super admin only)
+
+### API Endpoints
+
+**Public / system-to-system**
+
+- `GET /api/health` - health check
+- `POST /api/auth/reset-password` - send password reset email (rate-limited)
+- `POST /api/stripe/webhook` - Stripe webhook receiver (signature-verified)
+- `POST /api/verify-payment` - verify Stripe checkout session + create subscription (service-role)
+
+**Authenticated (Supabase user session)**
+
+- `POST /api/auth/update-password` - update password from reset session (rate-limited)
+- `POST /api/create-checkout` - create Stripe checkout / coupon flows
+- `GET /api/subscriptions/check-allowance` - credits check (RPC)
+- `POST /api/subscriptions/activate` - activate subscription + add allowances (RPC)
+
+**Letters (subscriber lifecycle)**
+
+- `POST /api/generate-letter` - AI-generate draft + submit for review (subscriber only)
+- `POST /api/letters/[id]/submit` - submit a letter for review (subscriber owner)
+- `POST /api/letters/[id]/resubmit` - regenerate rejected letter + re-submit (subscriber owner)
+- `POST /api/letters/[id]/send-email` - email an approved/completed letter PDF (subscriber owner)
+- `GET /api/letters/[id]/pdf` - download approved letter PDF (subscriber owner; admins)
+
+**Admin / Review workflows**
+
+- `POST /api/letters/improve` - AI improve helper (admin - Supabase role)
+- `POST /api/letters/[id]/start-review` - set `under_review` (admin portal session)
+- `POST /api/letters/[id]/approve` - approve + store final content (admin portal session)
+- `POST /api/letters/[id]/reject` - reject with reason (admin portal session)
+- `POST /api/letters/[id]/improve` - AI improve helper for review (admin portal session)
+- `POST /api/letters/[id]/complete` - mark approved letter completed (admin portal session)
+
+**Admin portal auth + super admin**
+
+- `POST /api/admin-auth/login` - create portal session cookie
+- `POST /api/admin-auth/logout` - destroy portal session cookie
+- `GET /api/admin/analytics` - analytics (admin portal session)
+- `POST /api/admin/promote-user` - change a user's `profiles.role` (super admin portal session)
+- `GET /api/admin/super-user` - list super users (super admin portal session)
+- `POST /api/admin/super-user` - grant/revoke `is_super_user` (super admin portal session)
+
+**Admin or CRON**
+
+- `POST /api/subscriptions/reset-monthly` - reset allowances (Bearer `CRON_SECRET` OR admin)
 
 ---
 
@@ -119,12 +211,12 @@ CRON_SECRET
 
 ## Key Database Functions
 
-| Function | Verify |
-|----------|--------|
-| `check_letter_allowance(u_id)` | Returns correct allowance info |
-| `deduct_letter_allowance(u_id)` | Properly decrements credits |
-| `log_letter_audit(...)` | Creates audit entries |
-| `validate_coupon(code)` | Validates employee coupons |
+| Function                        | Verify                         |
+| ------------------------------- | ------------------------------ |
+| `check_letter_allowance(u_id)`  | Returns correct allowance info |
+| `deduct_letter_allowance(u_id)` | Properly decrements credits    |
+| `log_letter_audit(...)`         | Creates audit entries          |
+| `validate_coupon(code)`         | Validates employee coupons     |
 
 ---
 
@@ -142,6 +234,7 @@ pnpm lint       # ESLint passes
 ## End-to-End Test Flow
 
 ### Test 1: Subscriber Journey
+
 1. Sign up as subscriber
 2. Create letter (first is free)
 3. Verify AI draft generated
@@ -150,6 +243,7 @@ pnpm lint       # ESLint passes
 6. Verify subscriber can now see content and download PDF
 
 ### Test 2: Employee Commission
+
 1. Create employee user
 2. Verify coupon auto-generated
 3. Subscriber uses coupon at checkout
@@ -157,6 +251,7 @@ pnpm lint       # ESLint passes
 5. Verify employee gets 1 point + 5% commission
 
 ### Test 3: Role Isolation
+
 1. As employee: attempt to access `/api/letters` → should fail
 2. As subscriber: attempt to access `/secure-admin-gateway` → should fail
 3. Verify RLS prevents cross-user data access
@@ -179,6 +274,3 @@ pnpm lint       # ESLint passes
 ❌ Modify database schema without migration script
 ❌ Create new routes or flows not in codebase
 ❌ Expose or log secrets
-
-
-
