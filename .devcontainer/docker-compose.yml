@@ -16,7 +16,7 @@ services:
       # Persist pnpm store
       - pnpm_store:/home/node/.local/share/pnpm
       # Persist bash history
-      - bash_history:/home/node/.bash_history
+      - bash_history:/home/node/bash_history_vol
       # Docker-outside-of-Docker: Mount host Docker socket
       - /var/run/docker.sock:/var/run/docker.sock
     ports:

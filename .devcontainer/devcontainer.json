@@ -13,6 +13,9 @@
 	// Run as the built-in node user from the base image
 	"remoteUser": "node",
 
+	// Ensure git config files exist on host before mounting (runs on host before container start)
+	"initializeCommand": "touch \"${localEnv:HOME}/.gitconfig\" && mkdir -p \"${localEnv:HOME}/.config/git\"",
+
 	// Reuse host git identity inside the container (fixes: "Author identity unknown")
 	"mounts": [
 		"source=${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig-host,type=bind,consistency=cached",

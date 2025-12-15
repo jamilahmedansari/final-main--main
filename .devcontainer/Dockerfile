@@ -98,7 +98,9 @@ alias dev="pnpm dev"\n\
 alias build="pnpm build"\n\
 alias lint="pnpm lint"\n\
 alias start="pnpm start"\n\
+export HISTFILE=/home/node/bash_history_vol/.bash_history\n\
 ' >> /home/node/.bashrc \
+  && mkdir -p /home/node/bash_history_vol \
   && touch /home/node/.sudo_as_admin_successful
 
 CMD ["bash"]
