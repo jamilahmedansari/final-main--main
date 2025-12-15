@@ -9,14 +9,15 @@ import {
   LayoutDashboard,
   Mail,
   Users,
-  UserCheck,
   Users2,
   Ticket,
   DollarSign,
   CreditCard,
   BarChart3,
   Menu,
-  X
+  X,
+  Gavel,
+  FileStack
 } from "lucide-react"
 import { useState } from "react"
 
@@ -25,7 +26,6 @@ interface NavItem {
   href: string
   icon: React.ComponentType<{ className?: string }>
   badge?: string
-  superUserOnly?: boolean
 }
 
 const navItems: NavItem[] = [
@@ -35,15 +35,15 @@ const navItems: NavItem[] = [
     icon: LayoutDashboard
   },
   {
-    title: "Letters",
+    title: "Review Center",
     href: "/admin/letters",
-    icon: Mail,
-    badge: "Review Queue"
+    icon: Gavel,
+    badge: "Review"
   },
   {
-    title: "Subscribers",
-    href: "/admin/subscribers",
-    icon: UserCheck
+    title: "All Letters",
+    href: "/admin/all-letters",
+    icon: FileStack
   },
   {
     title: "All Users",
@@ -53,20 +53,17 @@ const navItems: NavItem[] = [
   {
     title: "Employees",
     href: "/admin/employees",
-    icon: Users2,
-    superUserOnly: true
+    icon: Users2
   },
   {
     title: "Coupons",
     href: "/admin/coupons",
-    icon: Ticket,
-    superUserOnly: true
+    icon: Ticket
   },
   {
     title: "Commissions",
     href: "/admin/commissions",
-    icon: DollarSign,
-    superUserOnly: true
+    icon: DollarSign
   },
   {
     title: "Subscriptions",
@@ -83,9 +80,6 @@ const navItems: NavItem[] = [
 export function AdminSidebar() {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
-
-  // TODO: Get user role from auth context
-  const isSuperUser = true // This should come from auth state
 
   return (
     <div className={cn(
@@ -104,11 +98,6 @@ export function AdminSidebar() {
 
         <nav className="space-y-2">
           {navItems.map((item) => {
-            // Skip super user only items if not super user
-            if (item.superUserOnly && !isSuperUser) {
-              return null
-            }
-
             const isActive = pathname === item.href
 
             return (
