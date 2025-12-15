@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import sgMail from '@sendgrid/mail'
-import { jsPDF } from 'jspdf'
+import { getEmailService } from '@/lib/email'
+import { generateLetterPdf } from '@/lib/pdf'
 
 type LetterRecord = {
   id: string
@@ -9,58 +9,36 @@ type LetterRecord = {
   status: string
   final_content: string | null
   ai_draft_content: string | null
+  intake_data: Record<string, unknown> | null
   created_at: string
+  approved_at: string | null
   profiles?: {
     full_name?: string | null
     email?: string | null
   } | null
 }
 
-const sendgridApiKey = process.env.SENDGRID_API_KEY
-const firmFromEmail = process.env.EMAIL_FROM || process.env.SENDGRID_FROM
-const firmFromName = process.env.EMAIL_FROM_NAME || 'Talk-To-My-Lawyer Legal Team'
-
-if (sendgridApiKey) {
-  sgMail.setApiKey(sendgridApiKey)
-}
-
-function sanitizeFileName(name: string) {
+function sanitizeFileName(name: string): string {
   return name.replace(/[^a-z0-9]/gi, '_') || 'letter'
 }
 
-function buildLetterPdf(letter: LetterRecord, note?: string) {
-  const doc = new jsPDF()
-  const margin = 20
-  const content = letter.final_content || letter.ai_draft_content || 'No letter content available.'
-  const senderName = letter.profiles?.full_name || 'Your attorney'
-  const createdDate = new Date(letter.created_at).toLocaleDateString()
+function extractParties(letter: LetterRecord): {
+  sender: { name: string; address?: string }
+  recipient: { name: string; address?: string; company?: string }
+} {
+  const intake = letter.intake_data || {}
 
-  doc.setFontSize(16)
-  doc.text(letter.title, margin, 20)
-  doc.setFontSize(11)
-  doc.text(`Prepared by: ${senderName}`, margin, 30)
-  doc.text(`Date: ${createdDate}`, margin, 38)
-
-  const introLines = doc.splitTextToSize(
-    note || 'Please find the approved legal letter attached for your records.',
-    170
-  )
-  doc.text(introLines, margin, 50)
-
-  doc.setFontSize(13)
-  doc.text('Letter Content', margin, 70)
-  doc.setFontSize(11)
-
-  const contentLines = doc.splitTextToSize(content, 170)
-  doc.text(contentLines, margin, 80)
-
-  doc.text(
-    'This correspondence has been reviewed for clarity and completeness.',
-    margin,
-    285
-  )
-
-  return Buffer.from(doc.output('arraybuffer'))
+  return {
+    sender: {
+      name: letter.profiles?.full_name || (intake.senderName as string) || 'Sender',
+      address: intake.senderAddress as string | undefined,
+    },
+    recipient: {
+      name: (intake.recipientName as string) || 'Recipient',
+      address: intake.recipientAddress as string | undefined,
+      company: intake.recipientCompany as string | undefined,
+    },
+  }
 }
 
 export async function POST(
@@ -79,9 +57,10 @@ export async function POST(
     const body = await request.json()
     const { recipientEmail, message } = body
 
-    if (!sendgridApiKey || !firmFromEmail) {
+    const emailService = getEmailService()
+    if (!emailService.isConfigured()) {
       return NextResponse.json({
-        error: 'Email provider is not configured'
+        error: 'Email service is not configured'
       }, { status: 500 })
     }
 
@@ -96,7 +75,7 @@ export async function POST(
       return NextResponse.json({ error: 'Letter not found' }, { status: 404 })
     }
 
-    if (letter.status !== 'approved') {
+    if (letter.status !== 'approved' && letter.status !== 'completed') {
       return NextResponse.json({ error: 'Only approved letters can be sent' }, { status: 400 })
     }
 
@@ -104,52 +83,94 @@ export async function POST(
       return NextResponse.json({ error: 'Recipient email is required' }, { status: 400 })
     }
 
-    const pdfBuffer = buildLetterPdf(letter, message)
-    const safeTitle = sanitizeFileName(letter.title)
-    const subject = `Reviewed Letter: ${letter.title}`
-    const senderEmail = firmFromEmail
-    const senderName = firmFromName
-    const letterOwner = letter.profiles?.full_name || 'Your legal team'
-    const fallbackMessage = message?.toString().trim() || 'Please review the attached approved letter.'
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(recipientEmail)) {
+      return NextResponse.json({ error: 'Invalid email address format' }, { status: 400 })
+    }
 
-    try {
-      await sgMail.send({
-        to: recipientEmail,
-        from: { email: senderEmail, name: senderName },
-        subject,
-        text: `${fallbackMessage}\n\nLetter prepared by ${letterOwner}.\nTitle: ${letter.title}`,
-        html: `
-          <p>${fallbackMessage}</p>
-          <p><strong>Letter Title:</strong> ${letter.title}</p>
-          <p><strong>Prepared by:</strong> ${letterOwner}</p>
-          <p>Date: ${new Date(letter.created_at).toLocaleDateString()}</p>
-          <p>The reviewed letter is attached as a PDF for your records.</p>
-        `,
-        attachments: [
-          {
-            content: pdfBuffer.toString('base64'),
-            filename: `${safeTitle}.pdf`,
-            type: 'application/pdf',
-            disposition: 'attachment'
-          }
-        ]
-      })
-    } catch (providerError: any) {
-      const providerMessages = providerError?.response?.body?.errors
-        ?.map((err: { message?: string }) => err.message)
-        .filter(Boolean)
-        .join('; ')
+    const parties = extractParties(letter)
+    const content = letter.final_content || letter.ai_draft_content || ''
 
-      console.error('[v0] Email provider error:', providerError?.response?.body || providerError)
+    const pdfResult = generateLetterPdf({
+      id: letter.id,
+      title: letter.title,
+      content,
+      parties,
+      createdAt: letter.created_at,
+      approvedAt: letter.approved_at || undefined,
+      isDraft: false,
+    }, {
+      showLetterhead: true,
+      showWatermark: false,
+    })
+
+    if (!pdfResult.success || !pdfResult.buffer) {
+      console.error('[SendEmail] PDF generation failed:', pdfResult.error)
       return NextResponse.json({
-        error: providerMessages || providerError?.message || 'Email provider failed to send message'
+        error: 'Failed to generate PDF attachment'
+      }, { status: 500 })
+    }
+
+    const safeTitle = sanitizeFileName(letter.title)
+    const letterOwner = letter.profiles?.full_name || 'Your legal team'
+    const customMessage = message?.toString().trim() || 'Please review the attached approved letter.'
+
+    const emailResult = await emailService.send({
+      to: recipientEmail,
+      subject: `Legal Letter: ${letter.title}`,
+      text: `${customMessage}\n\nLetter prepared by ${letterOwner}.\nTitle: ${letter.title}\n\nThe reviewed letter is attached as a PDF.`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #1a1a2e; color: white; padding: 20px; text-align: center;">
+            <h2 style="margin: 0;">Talk-To-My-Lawyer</h2>
+          </div>
+          <div style="padding: 30px; background: #ffffff; border: 1px solid #e0e0e0;">
+            <p>${customMessage}</p>
+            <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Letter Title:</strong> ${letter.title}</p>
+              <p style="margin: 10px 0 0 0;"><strong>Prepared by:</strong> ${letterOwner}</p>
+              <p style="margin: 10px 0 0 0;"><strong>Date:</strong> ${new Date(letter.created_at).toLocaleDateString()}</p>
+            </div>
+            <p>The reviewed letter is attached as a PDF for your records.</p>
+          </div>
+          <div style="padding: 20px; background: #f5f5f5; text-align: center; font-size: 12px; color: #666;">
+            <p>Talk-To-My-Lawyer | Professional Legal Letter Services</p>
+          </div>
+        </div>
+      `,
+      attachments: [
+        {
+          content: pdfResult.buffer.toString('base64'),
+          filename: `${safeTitle}.pdf`,
+          type: 'application/pdf',
+          disposition: 'attachment',
+        },
+      ],
+    })
+
+    if (!emailResult.success) {
+      console.error('[SendEmail] Email send failed:', emailResult.error)
+      return NextResponse.json({
+        error: emailResult.error || 'Failed to send email'
       }, { status: 502 })
     }
 
-    return NextResponse.json({ success: true })
+    await supabase.rpc('log_letter_audit', {
+      p_letter_id: letter.id,
+      p_action: 'email_sent',
+      p_old_status: letter.status,
+      p_new_status: letter.status,
+      p_notes: `Letter emailed to ${recipientEmail}`,
+    }).catch(err => {
+      console.warn('[SendEmail] Audit log failed:', err)
+    })
 
+    return NextResponse.json({
+      success: true,
+      messageId: emailResult.messageId,
+    })
   } catch (error) {
-    console.error('[v0] Email sending error:', error)
+    console.error('[SendEmail] Unexpected error:', error)
     return NextResponse.json(
       { error: 'Failed to send email' },
       { status: 500 }
