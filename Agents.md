@@ -29,8 +29,10 @@ User → Letter Form → AI Draft (GPT-4 Turbo) → Admin Review → PDF Downloa
 ### is_super_user Verification
 
 ```
-⚠️ profiles.is_super_user = UNLIMITED LETTERS, NOT admin privilege
-Verify: No code treats is_super_user as admin access flag
+⚠️ profiles.is_super_user is NOT an admin *role*.
+- For subscribers: unlimited letter allowances (business flag).
+- For admins: used as a “super admin” flag for additional secure-portal pages/APIs.
+Verify: is_super_user never grants portal access by itself (must still be role='admin' + portal session).
 ```
 
 ---
@@ -119,6 +121,7 @@ draft → generating → pending_review → under_review → approved/rejected �
 
 **Secure Admin Portal (separate portal session)**
 
+- `/secure-admin-gateway` - portal entry (redirects to login/dashboard based on portal session)
 - `/secure-admin-gateway/login` - portal login (email/password + portal key)
 - `/secure-admin-gateway/dashboard` - portal dashboard (all admins)
 - `/secure-admin-gateway/review` - review center / queue (all admins)
@@ -142,6 +145,7 @@ draft → generating → pending_review → under_review → approved/rejected �
 
 - `POST /api/auth/update-password` - update password from reset session (rate-limited)
 - `POST /api/create-checkout` - create Stripe checkout / coupon flows
+- `POST /api/create-profile` - create/update own `profiles` row (self-only; uses service role)
 - `GET /api/subscriptions/check-allowance` - credits check (RPC)
 - `POST /api/subscriptions/activate` - activate subscription + add allowances (RPC)
 
@@ -156,6 +160,7 @@ draft → generating → pending_review → under_review → approved/rejected �
 **Admin / Review workflows**
 
 - `POST /api/letters/improve` - AI improve helper (admin - Supabase role)
+- `GET /api/letters/[id]/audit` - letter audit trail (INTENDED: admin-only; employee must not access letter data)
 - `POST /api/letters/[id]/start-review` - set `under_review` (admin portal session)
 - `POST /api/letters/[id]/approve` - approve + store final content (admin portal session)
 - `POST /api/letters/[id]/reject` - reject with reason (admin portal session)
