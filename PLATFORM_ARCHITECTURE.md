@@ -28,6 +28,7 @@
 **Purpose**: Handles user login and role-based routing
 
 **Process Flow**:
+
 ```
 1. User enters email/password
 2. Supabase Auth validates credentials
@@ -40,54 +41,56 @@
 
 ```typescript
 // 1. CREATE SUPABASE CLIENT
-const supabase = createClient()
+const supabase = createClient();
 
 // 2. SIGN IN WITH SUPABASE AUTH
-const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-  email,
-  password,
-})
+const { data: authData, error: signInError } =
+  await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
 // 3. FETCH USER ROLE FROM PROFILES TABLE (with retry logic)
-let profile = null
+let profile = null;
 for (let i = 0; i < 3; i++) {
   const result = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', authData.user.id)
-    .maybeSingle()
-  
-  profile = result.data
-  if (profile) break
-  
+    .from("profiles")
+    .select("role")
+    .eq("id", authData.user.id)
+    .maybeSingle();
+
+  profile = result.data;
+  if (profile) break;
+
   // Wait before retrying
   if (i < 2) {
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 }
 
 // 4. API FALLBACK (create profile if missing)
 if (!profile) {
-  await fetch('/api/create-profile', {
-    method: 'POST',
+  await fetch("/api/create-profile", {
+    method: "POST",
     body: JSON.stringify({
       userId: authData.user.id,
       email: authData.user.email,
-      role: 'subscriber'
-    })
-  })
+      role: "subscriber",
+    }),
+  });
 }
 
 // 5. ROLE-BASED REDIRECT
 const roleRedirects: Record<string, string> = {
-  'subscriber': '/dashboard/letters',
-  'employee': '/dashboard/commissions',
-  'admin': '/dashboard/admin/letters'
-}
-router.push(roleRedirects[profile?.role || 'subscriber'])
+  subscriber: "/dashboard/letters",
+  employee: "/dashboard/commissions",
+  admin: "/dashboard/admin/letters",
+};
+router.push(roleRedirects[profile?.role || "subscriber"]);
 ```
 
 **Database Interactions**:
+
 - Queries: `profiles` table for user role
 - Trigger: `handle_new_user()` creates profile on signup
 - RLS Policy: User can only read their own profile
@@ -101,6 +104,7 @@ router.push(roleRedirects[profile?.role || 'subscriber'])
 **Purpose**: Protects routes and enforces role-based access with separate admin portal authentication
 
 **Process Flow**:
+
 ```
 1. Every request passes through middleware
 2. Check for admin portal routes (separate auth system)
@@ -115,7 +119,7 @@ router.push(roleRedirects[profile?.role || 'subscriber'])
 export async function updateSession(request: NextRequest) {
   const supabase = createServerClient(...)
   const { data: { user } } = await supabase.auth.getUser()
-  
+
   // Get user role for route protection
   let userRole = null
   if (user) {
@@ -133,7 +137,7 @@ export async function updateSession(request: NextRequest) {
   // ADMIN PORTAL PROTECTION (Separate Auth)
   // =========================================
   const adminPortalRoute = process.env.ADMIN_PORTAL_ROUTE || 'secure-admin-gateway'
-  
+
   if (pathname.startsWith(`/${adminPortalRoute}`)) {
     // Allow login page without auth
     if (pathname === `/${adminPortalRoute}/login`) {
@@ -177,7 +181,7 @@ export async function updateSession(request: NextRequest) {
   // =========================================
   // REGULAR ROUTE PROTECTION
   // =========================================
-  
+
   // Public routes
   if (pathname === '/' || pathname.startsWith('/auth')) {
     return supabaseResponse
@@ -191,15 +195,15 @@ export async function updateSession(request: NextRequest) {
   // Role-based routing
   if (user && userRole) {
     // Employees can't access subscriber routes
-    if (userRole === 'employee' && 
-        (pathname.startsWith('/dashboard/letters') || 
+    if (userRole === 'employee' &&
+        (pathname.startsWith('/dashboard/letters') ||
          pathname.startsWith('/dashboard/subscription'))) {
       return NextResponse.redirect('/dashboard/commissions')
     }
 
     // Subscribers can't access employee routes
-    if (userRole === 'subscriber' && 
-        (pathname.startsWith('/dashboard/commissions') || 
+    if (userRole === 'subscriber' &&
+        (pathname.startsWith('/dashboard/commissions') ||
          pathname.startsWith('/dashboard/coupons'))) {
       return NextResponse.redirect('/dashboard/letters')
     }
@@ -211,17 +215,17 @@ export async function updateSession(request: NextRequest) {
 
 **Protected Routes Summary**:
 
-| Route | Access |
-|-------|--------|
-| `/` | Public |
-| `/auth/*` | Public |
-| `/dashboard/letters` | Subscriber |
-| `/dashboard/subscription` | Subscriber |
-| `/dashboard/commissions` | Employee, Admin |
-| `/dashboard/coupons` | Employee, Admin |
-| `/secure-admin-gateway/login` | Public |
-| `/secure-admin-gateway/review` | Admin (any) |
-| `/secure-admin-gateway/dashboard/*` | Super Admin only |
+| Route                               | Access          |
+| ----------------------------------- | --------------- |
+| `/`                                 | Public          |
+| `/auth/*`                           | Public          |
+| `/dashboard/letters`                | Subscriber      |
+| `/dashboard/subscription`           | Subscriber      |
+| `/dashboard/commissions`            | Employee, Admin |
+| `/dashboard/coupons`                | Employee, Admin |
+| `/secure-admin-gateway/login`       | Public          |
+| `/secure-admin-gateway/review`      | Admin           |
+| `/secure-admin-gateway/dashboard/*` | Admin           |
 
 ---
 
@@ -232,43 +236,47 @@ export async function updateSession(request: NextRequest) {
 **Purpose**: Separate authentication system for admin portal using environment-based credentials
 
 **Key Features**:
+
 - Custom session tokens stored in httpOnly cookies
 - 30-minute session timeout with activity refresh
 - Environment-based credentials (not database)
-- Super admin vs regular admin distinction
+- Single admin model (no internal tiers)
 
 **Code Breakdown**:
 
 ```typescript
-const ADMIN_SESSION_COOKIE = 'admin_session'
-const ADMIN_SESSION_TIMEOUT = 30 * 60 * 1000 // 30 minutes
+const ADMIN_SESSION_COOKIE = "admin_session";
+const ADMIN_SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
 export interface AdminSession {
-  userId: string
-  email: string
-  loginTime: number
-  lastActivity: number
-  portalKeyVerified: boolean
+  userId: string;
+  email: string;
+  loginTime: number;
+  lastActivity: number;
+  portalKeyVerified: boolean;
 }
 
 // Create admin session after successful login
-export async function createAdminSession(userId: string, email: string): Promise<void> {
+export async function createAdminSession(
+  userId: string,
+  email: string
+): Promise<void> {
   const session: AdminSession = {
     userId,
     email,
     loginTime: Date.now(),
     lastActivity: Date.now(),
-    portalKeyVerified: true
-  }
+    portalKeyVerified: true,
+  };
 
-  const cookieStore = await cookies()
+  const cookieStore = await cookies();
   cookieStore.set(ADMIN_SESSION_COOKIE, JSON.stringify(session), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
     maxAge: 1800, // 30 minutes
-    path: '/'
-  })
+    path: "/",
+  });
 }
 
 // Verify admin credentials against environment variables
@@ -279,56 +287,42 @@ export async function verifyAdminCredentials(
 ): Promise<{ success: boolean; userId?: string; error?: string }> {
   // Verify portal key
   if (portalKey !== process.env.ADMIN_PORTAL_KEY) {
-    return { success: false, error: 'Invalid admin portal key' }
+    return { success: false, error: "Invalid admin portal key" };
   }
 
   // Verify credentials
-  if (email !== process.env.ADMIN_EMAIL || 
-      password !== process.env.ADMIN_PASSWORD) {
-    return { success: false, error: 'Invalid admin credentials' }
+  if (
+    email !== process.env.ADMIN_EMAIL ||
+    password !== process.env.ADMIN_PASSWORD
+  ) {
+    return { success: false, error: "Invalid admin credentials" };
   }
 
   // Get admin user ID from database
-  const supabase = await createClient()
+  const supabase = await createClient();
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, role')
-    .eq('email', email)
-    .eq('role', 'admin')
-    .single()
+    .from("profiles")
+    .select("id, role")
+    .eq("email", email)
+    .eq("role", "admin")
+    .single();
 
   if (!profile) {
-    return { success: false, error: 'Admin account not found' }
+    return { success: false, error: "Admin account not found" };
   }
 
-  return { success: true, userId: profile.id }
-}
-
-// Check if admin is super admin
-export async function isSuperAdmin(): Promise<boolean> {
-  const session = await verifyAdminSession()
-  if (!session) return false
-
-  const supabase = await createClient()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, is_super_user')
-    .eq('id', session.userId)
-    .single()
-
-  return profile?.role === 'admin' && profile?.is_super_user === true
+  return { success: true, userId: profile.id };
 }
 ```
 
 **Admin Portal Routes**:
 
-| Route | Purpose | Access |
-|-------|---------|--------|
-| `/secure-admin-gateway/login` | Admin login page | Public |
-| `/secure-admin-gateway/review` | Review center | All Admins |
-| `/secure-admin-gateway/review/[id]` | Review specific letter | All Admins |
-| `/secure-admin-gateway/dashboard/users` | User management | Super Admin |
-| `/secure-admin-gateway/dashboard/analytics` | Analytics | Super Admin |
+| Route                                       | Purpose                | Access |
+| ------------------------------------------- | ---------------------- | ------ |
+| `/secure-admin-gateway/login`               | Admin login page       | Public |
+| `/secure-admin-gateway/review`              | Review center          | Admin  |
+| `/secure-admin-gateway/review/[id]`         | Review specific letter | Admin  |
+| `/secure-admin-gateway/dashboard/analytics` | Analytics              | Admin  |
 
 ---
 
@@ -337,6 +331,7 @@ export async function isSuperAdmin(): Promise<boolean> {
 ### **Dashboard**: `/app/dashboard/letters/page.tsx`
 
 **Features**:
+
 - View all generated letters
 - Create new letters
 - Check allowance/credits
@@ -475,6 +470,7 @@ return {
 ```
 
 **Error Handling**:
+
 ```typescript
 catch (generationError) {
   // Mark letter as failed
@@ -482,7 +478,7 @@ catch (generationError) {
     .from('letters')
     .update({ status: 'failed', updated_at: NOW() })
     .eq('id', newLetter.id)
-  
+
   // Log failure in audit trail
   await supabase.rpc('log_letter_audit', {
     p_letter_id: newLetter.id,
@@ -491,7 +487,7 @@ catch (generationError) {
     p_new_status: 'failed',
     p_notes: `Generation failed: ${error.message}`
   })
-  
+
   return 500 "AI generation failed"
 }
 ```
@@ -504,11 +500,11 @@ catch (generationError) {
 
 **Available Plans**:
 
-| Plan ID | Name | Price | Credits |
-|---------|------|-------|---------|
-| `one_time` | Single Letter | $299 | 1 |
-| `standard_4_month` | Monthly Plan | $299 | 4/month |
-| `premium_8_month` | Yearly Plan | $599 | 8/year |
+| Plan ID            | Name          | Price | Credits |
+| ------------------ | ------------- | ----- | ------- |
+| `one_time`         | Single Letter | $299  | 1       |
+| `standard_4_month` | Monthly Plan  | $299  | 4/month |
+| `premium_8_month`  | Yearly Plan   | $599  | 8/year  |
 
 ### **API Endpoint**: `/app/api/create-checkout/route.ts`
 
@@ -530,7 +526,7 @@ if (couponCode) {
   if (coupon) {
     discount = coupon.discount_percent
     employeeId = coupon.employee_id
-    
+
     // TALK3 and other 100% discount codes make user super_user
     if (discount === 100) {
       isSuperUserCoupon = true
@@ -631,6 +627,7 @@ Called after Stripe redirects back to create the subscription record.
 ### **Dashboard**: `/app/dashboard/coupons/page.tsx`
 
 **Features**:
+
 - View personal coupon code
 - Track total redemptions
 - See total revenue generated
@@ -639,6 +636,7 @@ Called after Stripe redirects back to create the subscription record.
 ### **Dashboard**: `/app/dashboard/commissions/page.tsx`
 
 **Features**:
+
 - View commission history
 - See total earned, pending, and paid amounts
 - Track monthly earnings
@@ -648,37 +646,44 @@ Called after Stripe redirects back to create the subscription record.
 ```typescript
 // EMPLOYEE SEES THEIR COUPON
 const { data: coupon } = await supabase
-  .from('employee_coupons')
-  .select('*')
-  .eq('employee_id', profile.id)
-  .single()
+  .from("employee_coupons")
+  .select("*")
+  .eq("employee_id", profile.id)
+  .single();
 
 // COUPON USAGE STATISTICS
 const { data: usageStats } = await supabase
-  .from('coupon_usage')
-  .select('*')
-  .eq('employee_id', profile.id)
+  .from("coupon_usage")
+  .select("*")
+  .eq("employee_id", profile.id);
 
 // COMMISSION RECORDS
 const { data: commissions } = await supabase
-  .from('commissions')
-  .select(`
+  .from("commissions")
+  .select(
+    `
     *,
     subscriptions!inner (
       user_id,
       plan,
       price
     )
-  `)
-  .eq('employee_id', profile.id)
-  .order('created_at', { ascending: false })
+  `
+  )
+  .eq("employee_id", profile.id)
+  .order("created_at", { ascending: false });
 
 // STATISTICS
-const totalEarned = commissions?.reduce((sum, c) => sum + Number(c.commission_amount), 0)
-const pendingAmount = commissions?.filter(c => c.status === 'pending')
-  .reduce((sum, c) => sum + Number(c.commission_amount), 0)
-const paidAmount = commissions?.filter(c => c.status === 'paid')
-  .reduce((sum, c) => sum + Number(c.commission_amount), 0)
+const totalEarned = commissions?.reduce(
+  (sum, c) => sum + Number(c.commission_amount),
+  0
+);
+const pendingAmount = commissions
+  ?.filter((c) => c.status === "pending")
+  .reduce((sum, c) => sum + Number(c.commission_amount), 0);
+const paidAmount = commissions
+  ?.filter((c) => c.status === "paid")
+  .reduce((sum, c) => sum + Number(c.commission_amount), 0);
 ```
 
 **Commission Creation (Database Trigger)**:
@@ -695,7 +700,7 @@ BEGIN
         SELECT employee_id INTO emp_id
         FROM employee_coupons
         WHERE code = NEW.coupon_code;
-        
+
         -- Only create if employee exists (not a promo code like TALK3)
         IF emp_id IS NOT NULL THEN
             INSERT INTO commissions (
@@ -715,7 +720,7 @@ BEGIN
             );
         END IF;
     END IF;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -734,6 +739,7 @@ CREATE TRIGGER create_commission_on_subscription
 ### **Review Center**: `/app/secure-admin-gateway/review/page.tsx`
 
 **Features**:
+
 - View all pending letters (FIFO order)
 - See pending vs under_review counts
 - Start review on any letter
@@ -796,28 +802,28 @@ await supabase.rpc('log_letter_audit', {
   <div>Type: {letter.letter_type}</div>
   <div>From: {letter.profiles?.full_name}</div>
   <div>Email: {letter.profiles?.email}</div>
-  
+
   {/* Editable Content with Rich Text Editor */}
   <RichTextEditor
     content={finalContent}
     onChange={setFinalContent}
   />
-  
+
   {/* AI IMPROVEMENT SECTION */}
-  <Input 
+  <Input
     placeholder="How should the AI improve this letter?"
     value={aiInstruction}
   />
   <Button onClick={handleAiImprove}>
     <Wand2 /> AI Improve
   </Button>
-  
+
   {/* Internal Review Notes */}
-  <Textarea 
+  <Textarea
     placeholder="Internal notes (not shown to client)"
     value={reviewNotes}
   />
-  
+
   {/* Action Buttons */}
   <Button onClick={() => setAction('approve')}>Approve Letter</Button>
   <Button onClick={() => setAction('reject')}>Reject Letter</Button>
@@ -958,6 +964,7 @@ SPECIAL STATUS:
 ```
 
 **Status Meanings**:
+
 - **draft**: Initial state, user created but hasn't submitted
 - **generating**: AI is creating the letter (OpenAI API call in progress)
 - **pending_review**: Letter generated, waiting in admin queue
@@ -988,6 +995,7 @@ Allows subscribers to resubmit a rejected letter for re-review.
 ## 🗄️ 10. DATABASE SCHEMA
 
 ### **profiles**
+
 ```sql
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id),
@@ -1001,6 +1009,7 @@ CREATE TABLE profiles (
 ```
 
 ### **letters**
+
 ```sql
 CREATE TABLE letters (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1024,6 +1033,7 @@ CREATE TABLE letters (
 ```
 
 ### **subscriptions**
+
 ```sql
 CREATE TABLE subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1046,6 +1056,7 @@ CREATE TABLE subscriptions (
 ```
 
 ### **employee_coupons**
+
 ```sql
 CREATE TABLE employee_coupons (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1060,6 +1071,7 @@ CREATE TABLE employee_coupons (
 ```
 
 ### **coupon_usage**
+
 ```sql
 CREATE TABLE coupon_usage (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1075,6 +1087,7 @@ CREATE TABLE coupon_usage (
 ```
 
 ### **commissions**
+
 ```sql
 CREATE TABLE commissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1090,6 +1103,7 @@ CREATE TABLE commissions (
 ```
 
 ### **letter_audit_trail**
+
 ```sql
 CREATE TABLE letter_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1145,11 +1159,12 @@ Users with `is_super_user = true` in profiles have special privileges:
 - **Automatically granted** when using TALK3 coupon (100% discount)
 
 **Check in code**:
+
 ```typescript
 // RPC function
-const { data: canDeduct } = await supabase.rpc('deduct_letter_allowance', {
-  u_id: user.id
-})
+const { data: canDeduct } = await supabase.rpc("deduct_letter_allowance", {
+  u_id: user.id,
+});
 // Returns TRUE without deducting if user is super_user
 ```
 
@@ -1195,23 +1210,23 @@ LOGIN
 
 ## 📋 API ROUTES REFERENCE
 
-| Route | Method | Purpose | Access |
-|-------|--------|---------|--------|
-| `/api/generate-letter` | POST | Generate new letter | Subscriber |
-| `/api/create-checkout` | POST | Create Stripe checkout | Subscriber |
-| `/api/verify-payment` | POST | Verify payment & create subscription | Subscriber |
-| `/api/create-profile` | POST | Create user profile | Internal |
-| `/api/letters/[id]/start-review` | POST | Start admin review | Admin |
-| `/api/letters/[id]/approve` | POST | Approve letter | Admin |
-| `/api/letters/[id]/reject` | POST | Reject letter | Admin |
-| `/api/letters/[id]/complete` | POST | Mark as completed | Admin |
-| `/api/letters/[id]/improve` | POST | AI improve content | Admin |
-| `/api/letters/[id]/pdf` | GET | Generate PDF | Subscriber/Admin |
-| `/api/letters/[id]/send-email` | POST | Send via email | Subscriber |
-| `/api/letters/[id]/resubmit` | POST | Resubmit rejected letter | Subscriber |
-| `/api/letters/[id]/audit` | GET | Get audit trail | Admin |
-| `/api/admin-auth/login` | POST | Admin portal login | Public |
-| `/api/admin-auth/logout` | POST | Admin portal logout | Admin |
+| Route                            | Method | Purpose                              | Access           |
+| -------------------------------- | ------ | ------------------------------------ | ---------------- |
+| `/api/generate-letter`           | POST   | Generate new letter                  | Subscriber       |
+| `/api/create-checkout`           | POST   | Create Stripe checkout               | Subscriber       |
+| `/api/verify-payment`            | POST   | Verify payment & create subscription | Subscriber       |
+| `/api/create-profile`            | POST   | Create user profile                  | Internal         |
+| `/api/letters/[id]/start-review` | POST   | Start admin review                   | Admin            |
+| `/api/letters/[id]/approve`      | POST   | Approve letter                       | Admin            |
+| `/api/letters/[id]/reject`       | POST   | Reject letter                        | Admin            |
+| `/api/letters/[id]/complete`     | POST   | Mark as completed                    | Admin            |
+| `/api/letters/[id]/improve`      | POST   | AI improve content                   | Admin            |
+| `/api/letters/[id]/pdf`          | GET    | Generate PDF                         | Subscriber/Admin |
+| `/api/letters/[id]/send-email`   | POST   | Send via email                       | Subscriber       |
+| `/api/letters/[id]/resubmit`     | POST   | Resubmit rejected letter             | Subscriber       |
+| `/api/letters/[id]/audit`        | GET    | Get audit trail                      | Admin            |
+| `/api/admin-auth/login`          | POST   | Admin portal login                   | Public           |
+| `/api/admin-auth/logout`         | POST   | Admin portal logout                  | Admin            |
 
 ---
 

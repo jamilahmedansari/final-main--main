@@ -39,13 +39,7 @@ export default function AdminLoginPage() {
         throw new Error(data.error || 'Authentication failed')
       }
 
-      // Redirect based on admin role
-      // Super admins go to dashboard, regular admins go to Review Center
-      if (data.isSuperAdmin) {
-        router.push('/secure-admin-gateway/dashboard')
-      } else {
-        router.push('/secure-admin-gateway/review')
-      }
+      router.push('/secure-admin-gateway/review')
       router.refresh()
 
     } catch (err: any) {

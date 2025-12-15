@@ -1,7 +1,7 @@
 import { getAdminSession } from '@/lib/auth/admin-session'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, Users, DollarSign, BarChart3, Shield, Gavel, LayoutDashboard, FileStack } from 'lucide-react'
+import { FileText, DollarSign, BarChart3, Shield, Gavel, LayoutDashboard, FileStack } from 'lucide-react'
 import { AdminLogoutButton } from '@/components/admin-logout-button'
 
 export default async function AdminDashboardLayout({
@@ -36,11 +36,6 @@ export default async function AdminDashboardLayout({
       name: 'All Letters',
       href: '/secure-admin-gateway/dashboard/all-letters',
       icon: FileStack
-    },
-    {
-      name: 'Users',
-      href: '/secure-admin-gateway/dashboard/users',
-      icon: Users
     },
     {
       name: 'Commissions',

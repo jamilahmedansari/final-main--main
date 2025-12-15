@@ -16,7 +16,6 @@ interface AdminHeaderProps {
     full_name: string | null
     email: string
     role: string
-    is_super_user?: boolean
   }
 }
 
@@ -50,9 +49,7 @@ export function AdminHeader({ user }: AdminHeaderProps) {
           <div className="text-right">
             <p className="text-sm font-medium text-gray-900">{user.full_name || user.email}</p>
             <div className="flex items-center space-x-2">
-              <Badge variant={user.is_super_user ? "destructive" : "secondary"}>
-                {user.is_super_user ? "Super Admin" : "Admin"}
-              </Badge>
+              <Badge variant="secondary">Admin</Badge>
               <span className="text-xs text-gray-500">{user.email}</span>
             </div>
           </div>

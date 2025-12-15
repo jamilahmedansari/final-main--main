@@ -121,11 +121,10 @@ pnpm lint                   # ESLint check
 - `/secure-admin-gateway/dashboard` - admin portal dashboard
 - `/secure-admin-gateway/review` - review center
 - `/secure-admin-gateway/review/[id]` - review a letter
-- `/secure-admin-gateway/dashboard/letters` - review queue
-- `/secure-admin-gateway/dashboard/users` - super admin only
-- `/secure-admin-gateway/dashboard/analytics` - super admin only
-- `/secure-admin-gateway/dashboard/commissions` - super admin only
-- `/secure-admin-gateway/dashboard/all-letters` - super admin only
+- `/secure-admin-gateway/dashboard/letters` - review queue (admin only)
+- `/secure-admin-gateway/dashboard/analytics` - analytics (admin only)
+- `/secure-admin-gateway/dashboard/commissions` - commissions (admin only)
+- `/secure-admin-gateway/dashboard/all-letters` - all letters (admin only)
 
 ### API Endpoints
 
@@ -160,14 +159,11 @@ pnpm lint                   # ESLint check
 - `POST /api/letters/[id]/improve` - AI improvement helper (admin portal session)
 - `POST /api/letters/[id]/complete` - mark letter completed (admin portal session)
 
-**Admin portal auth + super admin**
+**Admin portal auth**
 
 - `POST /api/admin-auth/login` - create admin portal session cookie
 - `POST /api/admin-auth/logout` - destroy admin portal session cookie
 - `GET /api/admin/analytics` - analytics (admin portal session)
-- `POST /api/admin/promote-user` - change a user's `profiles.role` (super admin portal session)
-- `GET /api/admin/super-user` - list super users (super admin portal session)
-- `POST /api/admin/super-user` - grant/revoke `is_super_user` (super admin portal session)
 
 **Admin or CRON**
 

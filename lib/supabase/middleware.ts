@@ -80,35 +80,6 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url)
       }
 
-      // Super admin route protection - specific routes that require super admin privileges
-      const superAdminRoutes = [
-        `/${adminPortalRoute}/dashboard/users`,
-        `/${adminPortalRoute}/dashboard/analytics`,
-        `/${adminPortalRoute}/dashboard/commissions`,
-        `/${adminPortalRoute}/dashboard/all-letters`,
-      ]
-
-      // Allow dashboard root and letters routes for all admins
-      // Main dashboard (/, /dashboard) and /dashboard/letters are accessible to all admins
-      const isAdminRoute = pathname.startsWith(`/${adminPortalRoute}/dashboard`)
-      const isSuperAdminRoute = superAdminRoutes.some(route => pathname.startsWith(route))
-
-      if (isSuperAdminRoute) {
-        // Verify super admin status
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role, is_super_user')
-          .eq('id', adminSession.userId)
-          .single()
-
-        if (!profile || profile.role !== 'admin' || !profile.is_super_user) {
-          // Redirect regular admins to Review Center
-          const url = request.nextUrl.clone()
-          url.pathname = `/${adminPortalRoute}/review`
-          return NextResponse.redirect(url)
-        }
-      }
-
       return supabaseResponse
     }
 
