@@ -2,10 +2,49 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { verifyAdminSessionFromRequest } from '@/lib/auth/admin-session'
 
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS, POST, PUT, DELETE',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+function getAllowedOrigins(): string[] {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const allowedOriginsEnv = process.env.ALLOWED_ORIGINS
+
+  const origins: string[] = []
+
+  if (appUrl) {
+    origins.push(appUrl)
+    const url = new URL(appUrl)
+    if (url.hostname.startsWith('www.')) {
+      origins.push(appUrl.replace('www.', ''))
+    } else {
+      origins.push(appUrl.replace('://', '://www.'))
+    }
+  }
+
+  if (allowedOriginsEnv) {
+    origins.push(...allowedOriginsEnv.split(',').map(o => o.trim()).filter(Boolean))
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    origins.push('http://localhost:3000', 'http://127.0.0.1:3000')
+  }
+
+  return [...new Set(origins)]
+}
+
+function getCorsHeaders(request: NextRequest): Record<string, string> {
+  const origin = request.headers.get('origin')
+  const allowedOrigins = getAllowedOrigins()
+
+  const isAllowedOrigin = origin && (
+    allowedOrigins.length === 0 ||
+    allowedOrigins.includes(origin) ||
+    process.env.NODE_ENV === 'development'
+  )
+
+  return {
+    'Access-Control-Allow-Origin': isAllowedOrigin && origin ? origin : allowedOrigins[0] || '',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS, POST, PUT, DELETE',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+    'Access-Control-Allow-Credentials': 'true',
+  }
 }
 
 // Rate limiting configuration
@@ -28,7 +67,8 @@ function getClientId(request: NextRequest): string {
   const cfConnectingIP = request.headers.get('cf-connecting-ip')
 
   if (forwarded) {
-    return forwarded.split(',')[0].trim()
+    const firstIp = forwarded.split(',')[0]
+    return firstIp ? firstIp.trim() : 'unknown'
   }
 
   if (realIP) {
@@ -54,7 +94,7 @@ function isRateLimited(request: NextRequest): { limited: boolean; resetTime?: nu
   const now = Date.now()
 
   // Get rate limit for this specific endpoint
-  const maxRequests = RATE_LIMIT_MAX_REQUESTS[path] || RATE_LIMIT_MAX_REQUESTS.default
+  const maxRequests = RATE_LIMIT_MAX_REQUESTS[path] ?? RATE_LIMIT_MAX_REQUESTS.default ?? 100
 
   // Get or create rate limit entry
   let entry = rateLimitStore.get(clientId)
@@ -129,7 +169,8 @@ export async function proxy(request: NextRequest) {
   // 1. CORS Preflight for API routes
   // ------------------------------------------
   if (request.method === 'OPTIONS' && pathname.startsWith('/api')) {
-    return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
+    const corsHeaders = getCorsHeaders(request)
+    return new NextResponse(null, { status: 204, headers: corsHeaders })
   }
 
   // ------------------------------------------
@@ -166,7 +207,8 @@ export async function proxy(request: NextRequest) {
       )
 
       // Add rate limit headers
-      Object.entries(CORS_HEADERS).forEach(([key, value]) => response.headers.set(key, value))
+      const corsHeaders = getCorsHeaders(request)
+      Object.entries(corsHeaders).forEach(([key, value]) => response.headers.set(key, value))
       response.headers.set('X-RateLimit-Limit', String(RATE_LIMIT_MAX_REQUESTS[pathname] || RATE_LIMIT_MAX_REQUESTS.default))
       response.headers.set('X-RateLimit-Remaining', '0')
       response.headers.set('X-RateLimit-Reset', String(Math.ceil(rateLimitResult.resetTime! / 1000)))
@@ -176,7 +218,8 @@ export async function proxy(request: NextRequest) {
 
     // For non-blocked API requests, just add headers and continue
     const response = await updateSession(request)
-    Object.entries(CORS_HEADERS).forEach(([key, value]) => response.headers.set(key, value))
+    const apiCorsHeaders = getCorsHeaders(request)
+    Object.entries(apiCorsHeaders).forEach(([key, value]) => response.headers.set(key, value))
     response.headers.set('X-RateLimit-Limit', String(RATE_LIMIT_MAX_REQUESTS[pathname] || RATE_LIMIT_MAX_REQUESTS.default))
     response.headers.set('X-RateLimit-Remaining', String(rateLimitResult.remaining || 0))
     response.headers.set('X-RateLimit-Reset', String(Math.ceil((rateLimitResult.resetTime || Date.now() + RATE_LIMIT_WINDOW) / 1000)))
