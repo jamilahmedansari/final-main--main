@@ -60,6 +60,35 @@ pnpm build                  # Must pass before deploy
 pnpm lint                   # ESLint check
 ```
 
+## Environment Variables (Do Not Paste Secrets)
+
+Use [.env.example](.env.example) as the source of truth. Put real values only in local/hosting env (e.g. `.env.local`, Vercel env vars) and never commit or paste secret values into repo docs.
+
+Required / common runtime vars (names only):
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only; never expose to client)
+- `OPENAI_API_KEY`
+- `STRIPE_SECRET_KEY`
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_PORTAL_KEY`
+- `CRON_SECRET`
+
+Optional (rate limiting / Upstash):
+- `KV_REST_API_URL`
+- `KV_REST_API_TOKEN`
+- `KV_REST_API_READ_ONLY_TOKEN`
+- `REDIS_URL`
+
+Notes:
+- `SUPABASE_ACCESS_TOKEN` is for the Supabase CLI (`supabase link`), not app runtime.
+- Direct Postgres connection URLs should not be used by the Next.js app unless explicitly implemented; keep them out of frontend/runtime env.
+
 ## Security Rules
 1. **RLS mandatory** - Never bypass with service role in user-facing code
 2. **Employee isolation** - No letter content access (business requirement)
