@@ -8,7 +8,7 @@ export type LetterStatus =
   | 'completed'
   | 'rejected'
   | 'failed'
-export type SubscriptionStatus = 'active' | 'canceled' | 'past_due'
+export type SubscriptionStatus = 'active' | 'pending' | 'canceled' | 'past_due' | 'payment_failed' | 'expired'
 export type CommissionStatus = 'pending' | 'paid'
 
 export interface Profile {
@@ -54,11 +54,18 @@ export interface Subscription {
   id: string
   user_id: string
   plan: string
+  plan_type: string
   status: SubscriptionStatus
   price: number
   discount: number
   coupon_code: string | null
   employee_id: string | null
+  credits_remaining: number
+  remaining_letters: number
+  current_period_start: string
+  current_period_end: string
+  stripe_session_id: string | null
+  stripe_customer_id: string | null
   created_at: string
   updated_at: string
   expires_at: string | null
@@ -122,9 +129,74 @@ export interface SecurityConfig {
 
 export interface CouponUsage {
   id: string
-  coupon_id: string
+  coupon_id: string | null
   user_id: string
-  subscription_id: string
-  discount_amount: number
+  coupon_code: string
+  employee_id: string | null
+  subscription_id: string | null
+  plan_type: string | null
+  discount_percent: number
+  amount_before: number
+  amount_after: number
   created_at: string
+}
+
+export interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: Profile
+        Insert: Partial<Profile> & Pick<Profile, 'id' | 'email' | 'role'>
+        Update: Partial<Profile>
+      }
+      letters: {
+        Row: Letter
+        Insert: Partial<Letter> & Pick<Letter, 'user_id' | 'title' | 'letter_type' | 'status'>
+        Update: Partial<Letter>
+      }
+      subscriptions: {
+        Row: Subscription
+        Insert: Partial<Subscription> & Pick<Subscription, 'user_id' | 'plan' | 'status' | 'price'>
+        Update: Partial<Subscription>
+      }
+      employee_coupons: {
+        Row: EmployeeCoupon
+        Insert: Partial<EmployeeCoupon> & Pick<EmployeeCoupon, 'employee_id' | 'code' | 'discount_percent'>
+        Update: Partial<EmployeeCoupon>
+      }
+      commissions: {
+        Row: Commission
+        Insert: Partial<Commission> & Pick<Commission, 'employee_id' | 'subscription_id' | 'subscription_amount' | 'commission_rate' | 'commission_amount' | 'status'>
+        Update: Partial<Commission>
+      }
+      letter_audit_trail: {
+        Row: LetterAuditTrail
+        Insert: Partial<LetterAuditTrail> & Pick<LetterAuditTrail, 'letter_id' | 'performed_by' | 'action'>
+        Update: Partial<LetterAuditTrail>
+      }
+      security_audit_logs: {
+        Row: SecurityAuditLog
+        Insert: Partial<SecurityAuditLog> & Pick<SecurityAuditLog, 'action'>
+        Update: Partial<SecurityAuditLog>
+      }
+      security_config: {
+        Row: SecurityConfig
+        Insert: Partial<SecurityConfig> & Pick<SecurityConfig, 'key'>
+        Update: Partial<SecurityConfig>
+      }
+      coupon_usage: {
+        Row: CouponUsage
+        Insert: Partial<CouponUsage> & Pick<CouponUsage, 'user_id' | 'coupon_code' | 'discount_percent' | 'amount_before' | 'amount_after'>
+        Update: Partial<CouponUsage>
+      }
+    }
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: {
+      user_role: UserRole
+      letter_status: LetterStatus
+      subscription_status: SubscriptionStatus
+      commission_status: CommissionStatus
+    }
+  }
 }
