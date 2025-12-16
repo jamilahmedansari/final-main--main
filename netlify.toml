@@ -1,6 +1,9 @@
 [build]
-command = "npx next build"
+command = "TURBOPACK=0 npx next build"
 publish = ".next"
+
+[build.environment]
+TURBOPACK = "0"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
