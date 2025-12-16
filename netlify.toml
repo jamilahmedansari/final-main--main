@@ -1,5 +1,5 @@
 [build]
-command = "TURBOPACK=0 npx next build"
+command = "npx next build"
 publish = ".next"
 
 [build.environment]
