@@ -94,7 +94,9 @@ async function updateSession(request: NextRequest): Promise<NextResponse> {
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('[Proxy] Missing Supabase environment variables')
+      console.error(
+        '[Proxy] Missing Supabase env. Create .env.local (cp .env.example .env.local), set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then restart the dev server.'
+      )
       return supabaseResponse
     }
 
