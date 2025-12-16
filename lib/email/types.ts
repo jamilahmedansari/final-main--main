@@ -1,4 +1,4 @@
-export type EmailProvider = 'sendgrid' | 'resend' | 'smtp' | 'console'
+export type EmailProvider = 'sendgrid' | 'brevo' | 'resend' | 'smtp' | 'console'
 
 export interface EmailAttachment {
   content: string

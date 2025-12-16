@@ -7,6 +7,7 @@ import type {
   TemplateData,
 } from './types'
 import { SendGridProvider } from './providers/sendgrid'
+import { BrevoProvider } from './providers/brevo'
 import { ConsoleProvider } from './providers/console'
 import { renderTemplate } from './templates'
 
@@ -18,6 +19,7 @@ class EmailService {
 
   constructor() {
     this.providers.set('sendgrid', new SendGridProvider())
+    this.providers.set('brevo', new BrevoProvider())
     this.providers.set('console', new ConsoleProvider())
 
     this.fromEmail = process.env.EMAIL_FROM || process.env.SENDGRID_FROM || 'noreply@talk-to-my-lawyer.com'
@@ -37,6 +39,10 @@ class EmailService {
 
     if (this.providers.get('sendgrid')!.isConfigured()) {
       return 'sendgrid'
+    }
+
+    if (this.providers.get('brevo')!.isConfigured()) {
+      return 'brevo'
     }
 
     if (process.env.NODE_ENV === 'development') {

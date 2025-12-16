@@ -20,6 +20,7 @@ const requiredEnvVars = {
     { name: 'KV_REST_API_URL', description: 'Upstash Redis URL for rate limiting' },
     { name: 'KV_REST_API_TOKEN', description: 'Upstash Redis token' },
     { name: 'SENDGRID_API_KEY', description: 'SendGrid API key for emails' },
+    { name: 'BREVO_API_KEY', description: 'Brevo API key for emails' },
     { name: 'EMAIL_FROM', description: 'From email address' },
     { name: 'ENABLE_TEST_MODE', description: 'Enable test mode', default: 'false' },
   ],
