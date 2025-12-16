@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { openai } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import { letterGenerationRateLimit, safeApplyRateLimit } from '@/lib/rate-limit-redis'
+import { deductLetterAllowance, logLetterAudit } from '@/lib/supabase/rpc-types'
 
 export const runtime = "nodejs"
 
@@ -72,6 +73,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "letterType and intakeData are required" }, { status: 400 })
     }
 
+    // Bot detection: Check honeypot field
+    if (intakeData.website_url && intakeData.website_url.trim() !== '') {
+      console.warn('[GenerateLetter] Honeypot triggered - bot detected', { userId: user.id })
+      return NextResponse.json(
+        { error: "Invalid submission. Please try again." },
+        { status: 400 }
+      )
+    }
+
+    // Bot detection: Check submission speed (should take at least 5 seconds to fill form)
+    if (intakeData.form_loaded_at) {
+      const timeSpent = Date.now() - parseInt(intakeData.form_loaded_at)
+      if (timeSpent < 5000) {
+        console.warn('[GenerateLetter] Suspiciously fast submission', {
+          userId: user.id,
+          timeSpent: `${timeSpent}ms`
+        })
+        return NextResponse.json(
+          { error: "Please take your time filling out the form." },
+          { status: 429 }
+        )
+      }
+    }
+
     if (!process.env.OPENAI_API_KEY) {
       console.error("[GenerateLetter] Missing OPENAI_API_KEY")
       return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
@@ -98,21 +123,45 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // 5. Generate letter using AI SDK with OpenAI
+      // 5. Generate letter using AI SDK with OpenAI (with timeout protection)
       const prompt = buildPrompt(letterType, intakeData)
 
-      const { text: generatedContent } = await generateText({
-        model: openai("gpt-4-turbo"),
-        system: "You are a professional legal attorney drafting formal legal letters. Always produce professional, legally sound content with proper formatting.",
-        prompt,
-        temperature: 0.7,
-        maxOutputTokens: 2048,
-      })
+      // Create AbortController for timeout protection (60 seconds max)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 60000)
 
-      if (!generatedContent) {
-        console.error("[GenerateLetter] AI returned empty content")
-        throw new Error("AI returned empty content")
+      try {
+        const { text: generatedContent } = await generateText({
+          model: openai("gpt-4-turbo"),
+          system: "You are a professional legal attorney drafting formal legal letters. Always produce professional, legally sound content with proper formatting.",
+          prompt,
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+          abortSignal: controller.signal,
+        })
+
+        clearTimeout(timeoutId)
+
+        if (!generatedContent) {
+          console.error("[GenerateLetter] AI returned empty content")
+          throw new Error("AI returned empty content")
+        }
+
+        // Continue with generated content...
+        var finalContent = generatedContent
+      } catch (error) {
+        clearTimeout(timeoutId)
+
+        // Check if it was a timeout
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.error("[GenerateLetter] AI generation timed out after 60 seconds")
+          throw new Error("Letter generation timed out. Please try again with a shorter description.")
+        }
+
+        throw error
       }
+
+      const generatedContent = finalContent
 
       // 6. Update letter with generated content and move to pending_review
       const { error: updateError } = await supabase
@@ -131,34 +180,48 @@ export async function POST(request: NextRequest) {
 
       // 7. Deduct allowance once we've successfully generated the letter (skip for free trial)
       if (!isFreeTrial) {
-        const { data: canDeduct, error: deductError } = await supabase.rpc("deduct_letter_allowance", {
-          user_uuid: user.id,
-        })
+        try {
+          const canDeduct = await deductLetterAllowance(supabase, user.id)
 
-        if (deductError || !canDeduct) {
-          // Mark as failed instead of deleting
+          if (!canDeduct) {
+            // Mark as failed instead of deleting
+            await supabase
+              .from("letters")
+              .update({ status: "failed", updated_at: new Date().toISOString() })
+              .eq("id", newLetter.id)
+
+            return NextResponse.json(
+              {
+                error: "No letter allowances remaining. Please upgrade your plan.",
+                needsSubscription: true,
+              },
+              { status: 403 },
+            )
+          }
+        } catch (deductError) {
+          console.error("[GenerateLetter] Failed to deduct allowance:", deductError)
+          // Mark as failed
           await supabase
             .from("letters")
             .update({ status: "failed", updated_at: new Date().toISOString() })
             .eq("id", newLetter.id)
-          
+
           return NextResponse.json(
             {
-              error: "No letter allowances remaining. Please upgrade your plan.",
-              needsSubscription: true,
+              error: "Failed to process letter allowance. Please try again.",
             },
-            { status: 403 },
+            { status: 500 },
           )
         }
       }
 
       // 8. Log audit trail for letter creation
-      await supabase.rpc('log_letter_audit', {
-        p_letter_id: newLetter.id,
-        p_action: 'created',
-        p_old_status: 'generating',
-        p_new_status: 'pending_review',
-        p_notes: 'Letter generated successfully by AI'
+      await logLetterAudit(supabase, {
+        letterId: newLetter.id,
+        action: 'created',
+        oldStatus: 'generating',
+        newStatus: 'pending_review',
+        notes: 'Letter generated successfully by AI'
       })
 
       return NextResponse.json(

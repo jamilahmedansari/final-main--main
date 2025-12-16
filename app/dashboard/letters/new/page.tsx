@@ -96,6 +96,9 @@ export default function NewLetterPage() {
     desiredOutcome: "",
     amountDemanded: "",
     supportingDocuments: "",
+    // Honeypot fields for bot detection
+    website_url: "", // Bots will fill this
+    form_loaded_at: Date.now(), // Track form interaction time
   })
 
   useEffect(() => {
@@ -339,6 +342,20 @@ export default function NewLetterPage() {
                   placeholder="List any contracts, invoices, emails, or other documents that support your case"
                   value={formData.supportingDocuments}
                   onChange={(e) => setFormData({ ...formData, supportingDocuments: e.target.value })}
+                />
+              </div>
+
+              {/* Honeypot field - invisible to humans, visible to bots */}
+              <div style={{ position: 'absolute', left: '-9999px', opacity: 0, pointerEvents: 'none' }} aria-hidden="true">
+                <Label htmlFor="website_url">Website URL (leave blank)</Label>
+                <Input
+                  id="website_url"
+                  name="website_url"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={formData.website_url}
+                  onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
                 />
               </div>
             </div>

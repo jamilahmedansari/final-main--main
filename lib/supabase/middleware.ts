@@ -3,9 +3,19 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { verifyAdminSessionFromRequest } from '@/lib/auth/admin-session'
 
 export async function updateSession(request: NextRequest) {
+  // Generate unique request ID for tracing
+  const requestId = crypto.randomUUID()
+  const startTime = Date.now()
+
   let supabaseResponse = NextResponse.next({
     request,
   })
+
+  // Add request ID to response headers for client-side tracking
+  supabaseResponse.headers.set('X-Request-ID', requestId)
+
+  // Log request with ID for distributed tracing
+  console.log(`[${requestId}] ${request.method} ${request.nextUrl.pathname}`)
 
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -146,15 +156,20 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
+    // Log response time
+    const duration = Date.now() - startTime
+    console.log(`[${requestId}] Completed in ${duration}ms`)
+
     return supabaseResponse
   } catch (error) {
-    console.error('[v0] Middleware error:', error)
-    
+    const duration = Date.now() - startTime
+    console.error(`[${requestId}] Middleware error (${duration}ms):`, error)
+
     // Allow access to auth pages even on error
     if (request.nextUrl.pathname.startsWith('/auth') || request.nextUrl.pathname === '/') {
       return supabaseResponse
     }
-    
+
     // Redirect to home with error for other routes
     const url = request.nextUrl.clone()
     url.pathname = '/'
