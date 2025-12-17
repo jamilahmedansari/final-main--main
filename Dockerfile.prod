@@ -1,0 +1,33 @@
+# Production Dockerfile (pnpm) for Next.js standalone output
+
+FROM node:20-slim AS base
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Install pnpm via corepack
+RUN corepack enable
+
+FROM base AS deps
+COPY pnpm-lock.yaml package.json ./
+RUN pnpm i --frozen-lockfile
+
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm build
+
+FROM node:20-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# If you use Next.js `output: 'standalone'`, these are the minimal runtime files
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+CMD ["node", "server.js"]

@@ -1,11 +1,14 @@
-FROM node:22-alpine
-WORKDIR /usr/src/app
-COPY ["package.json", "package-lock.json*", "npm-shrinkwrap.json*", "./"]
-RUN npm install --silent
+FROM node:20-slim
+
+WORKDIR /app
+
+# Install pnpm via corepack
+RUN corepack enable
+
+COPY pnpm-lock.yaml package.json ./
+RUN pnpm i --frozen-lockfile
+
 COPY . .
-RUN npm run build
-ENV NODE_ENV=production
+
 EXPOSE 3000
-RUN chown -R node /usr/src/app
-USER node
-CMD ["npm", "start"]
+CMD ["pnpm","dev","--","--hostname","0.0.0.0","--port","3000"]
