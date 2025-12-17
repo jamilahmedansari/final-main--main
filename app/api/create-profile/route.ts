@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import { NextRequest, NextResponse } from "next/server"
 import { createRateLimit } from "@/lib/rate-limit"
+import { sendTemplateEmail } from "@/lib/email"
 
 // Rate limiting for profile creation
 const rateLimiter = createRateLimit({
@@ -111,6 +112,19 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       email,
       role
+    })
+
+    // Send welcome email asynchronously (fire and forget)
+    sendTemplateEmail(
+      'welcome',
+      email,
+      {
+        userName: fullName.split(' ')[0], // First name
+        actionUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://talk-to-my-lawyer.com'}/dashboard`
+      }
+    ).catch((error) => {
+      console.error('[CreateProfile] Failed to send welcome email:', error)
+      // Don't fail the request if email fails
     })
 
     return NextResponse.json({
