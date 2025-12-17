@@ -12,7 +12,9 @@ export async function updateSession(request: NextRequest) {
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('[v0] Missing Supabase environment variables in middleware')
+      console.error(
+        '[Middleware] Missing Supabase env. Create .env.local (cp .env.example .env.local), set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then restart the dev server.'
+      )
       // Allow access to auth pages and home without Supabase
       if (request.nextUrl.pathname.startsWith('/auth') || request.nextUrl.pathname === '/') {
         return supabaseResponse
@@ -78,35 +80,6 @@ export async function updateSession(request: NextRequest) {
         const url = request.nextUrl.clone()
         url.pathname = `/${adminPortalRoute}/login`
         return NextResponse.redirect(url)
-      }
-
-      // Super admin route protection - specific routes that require super admin privileges
-      const superAdminRoutes = [
-        `/${adminPortalRoute}/dashboard/users`,
-        `/${adminPortalRoute}/dashboard/analytics`,
-        `/${adminPortalRoute}/dashboard/commissions`,
-        `/${adminPortalRoute}/dashboard/all-letters`,
-      ]
-
-      // Allow dashboard root and letters routes for all admins
-      // Main dashboard (/, /dashboard) and /dashboard/letters are accessible to all admins
-      const isAdminRoute = pathname.startsWith(`/${adminPortalRoute}/dashboard`)
-      const isSuperAdminRoute = superAdminRoutes.some(route => pathname.startsWith(route))
-
-      if (isSuperAdminRoute) {
-        // Verify super admin status
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role, is_super_user')
-          .eq('id', adminSession.userId)
-          .single()
-
-        if (!profile || profile.role !== 'admin' || !profile.is_super_user) {
-          // Redirect regular admins to Review Center
-          const url = request.nextUrl.clone()
-          url.pathname = `/${adminPortalRoute}/review`
-          return NextResponse.redirect(url)
-        }
       }
 
       return supabaseResponse

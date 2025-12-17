@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminAuth, getAdminSession } from '@/lib/auth/admin-session'
+import { sendTemplateEmail } from '@/lib/email/service'
 
 export async function POST(
   request: NextRequest,
@@ -24,7 +25,7 @@ export async function POST(
 
     const { data: letter } = await supabase
       .from('letters')
-      .select('status')
+      .select('status, user_id, title')
       .eq('id', id)
       .single()
 
@@ -49,6 +50,27 @@ export async function POST(
       p_new_status: 'rejected',
       p_notes: `Rejection reason: ${rejectionReason}`
     })
+
+    // Send rejection notification email (non-blocking)
+    if (letter?.user_id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', letter.user_id)
+        .single()
+
+      if (profile?.email) {
+        // Send email asynchronously - don't wait for it
+        sendTemplateEmail('letter-rejected', profile.email, {
+          userName: profile.full_name || 'there',
+          letterTitle: letter.title || 'Your letter',
+          rejectionReason: rejectionReason,
+          actionUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/letters/${id}`,
+        }).catch(error => {
+          console.error('[Reject] Failed to send rejection email:', error)
+        })
+      }
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

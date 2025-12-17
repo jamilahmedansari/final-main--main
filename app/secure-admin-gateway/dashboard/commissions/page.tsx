@@ -1,15 +1,17 @@
-import { getUser } from '@/lib/auth/get-user'
+import { isAdminAuthenticated } from '@/lib/auth/admin-session'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { DashboardLayout } from '@/components/dashboard-layout'
 import { format } from 'date-fns'
 import { PayCommissionButton } from '@/components/pay-commission-button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { DollarSign, Users, Clock, CheckCircle } from 'lucide-react'
 
 export default async function AdminCommissionsPage() {
-  const { profile } = await getUser()
-  
-  if (profile.role !== 'admin') {
-    redirect('/dashboard')
+  // Verify admin session
+  const authenticated = await isAdminAuthenticated()
+  if (!authenticated) {
+    redirect('/secure-admin-gateway/login')
   }
 
   const supabase = await createClient()
@@ -32,95 +34,149 @@ export default async function AdminCommissionsPage() {
   const totalPending = commissions?.filter(c => c.status === 'pending').reduce((sum, c) => sum + Number(c.commission_amount), 0) || 0
   const totalPaid = commissions?.filter(c => c.status === 'paid').reduce((sum, c) => sum + Number(c.commission_amount), 0) || 0
   const pendingCount = commissions?.filter(c => c.status === 'pending').length || 0
+  const paidCount = commissions?.filter(c => c.status === 'paid').length || 0
 
   return (
-    <DashboardLayout>
-      <h1 className="text-3xl font-bold text-slate-900 mb-6">Commission Management</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Commission Management</h1>
+        <p className="text-muted-foreground mt-2">
+          Manage employee commission payouts and track payments
+        </p>
+      </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="text-sm font-medium text-slate-500 mb-2">Pending Payouts</div>
-          <div className="text-3xl font-bold text-yellow-600">${totalPending.toFixed(2)}</div>
-          <div className="text-xs text-slate-500 mt-1">{pendingCount} commissions</div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="text-sm font-medium text-slate-500 mb-2">Total Paid</div>
-          <div className="text-3xl font-bold text-green-600">${totalPaid.toFixed(2)}</div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="text-sm font-medium text-slate-500 mb-2">Total Commissions</div>
-          <div className="text-3xl font-bold text-slate-900">{commissions?.length || 0}</div>
-        </div>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className={pendingCount > 0 ? 'border-amber-300 bg-amber-50/50' : ''}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Pending Payouts</CardTitle>
+            <Clock className={`h-4 w-4 ${pendingCount > 0 ? 'text-amber-600' : 'text-muted-foreground'}`} />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${pendingCount > 0 ? 'text-amber-700' : ''}`}>
+              ${totalPending.toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">{pendingCount} commissions awaiting payment</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">${totalPaid.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">{paidCount} commissions paid out</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total Commissions</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{commissions?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">All time commissions</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Unique Employees</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Set(commissions?.map(c => c.employee_id)).size}
+            </div>
+            <p className="text-xs text-muted-foreground">Employees with commissions</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Commissions Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-          <h2 className="text-lg font-semibold">All Commissions</h2>
-        </div>
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                Employee
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                Plan
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                Subscription
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                Commission
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-slate-200">
-            {commissions?.map((commission) => (
-              <tr key={commission.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4">
-                  <div className="text-sm font-medium text-slate-900">{commission.profiles?.full_name}</div>
-                  <div className="text-xs text-slate-500">{commission.profiles?.email}</div>
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-500">
-                  {format(new Date(commission.created_at), 'MMM d, yyyy')}
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-900">
-                  {commission.subscriptions?.plan || 'N/A'}
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-900">
-                  ${Number(commission.subscription_amount).toFixed(2)}
-                </td>
-                <td className="px-6 py-4 text-sm font-medium text-green-600">
-                  ${Number(commission.commission_amount).toFixed(2)}
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    commission.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {commission.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  {commission.status === 'pending' && (
-                    <PayCommissionButton commissionId={commission.id} />
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </DashboardLayout>
+      <Card>
+        <CardHeader>
+          <CardTitle>All Commissions</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Employee
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Plan
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Subscription
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Commission
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {commissions?.map((commission) => (
+                  <tr key={commission.id} className="hover:bg-muted/30">
+                    <td className="px-4 py-4">
+                      <div className="text-sm font-medium">{commission.profiles?.full_name || 'Unknown'}</div>
+                      <div className="text-xs text-muted-foreground">{commission.profiles?.email}</div>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-muted-foreground">
+                      {format(new Date(commission.created_at), 'MMM d, yyyy')}
+                    </td>
+                    <td className="px-4 py-4 text-sm">
+                      {commission.subscriptions?.plan || 'N/A'}
+                    </td>
+                    <td className="px-4 py-4 text-sm">
+                      ${Number(commission.subscription_amount).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-4 text-sm font-medium text-green-600">
+                      ${Number(commission.commission_amount).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-4">
+                      <Badge variant={commission.status === 'paid' ? 'default' : 'secondary'} 
+                             className={commission.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
+                        {commission.status === 'paid' ? (
+                          <><CheckCircle className="h-3 w-3 mr-1" /> Paid</>
+                        ) : (
+                          <><Clock className="h-3 w-3 mr-1" /> Pending</>
+                        )}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-4">
+                      {commission.status === 'pending' && (
+                        <PayCommissionButton commissionId={commission.id} />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {(!commissions || commissions.length === 0) && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                      No commissions found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

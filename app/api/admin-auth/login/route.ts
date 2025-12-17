@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdminCredentials, createAdminSession } from '@/lib/auth/admin-session'
-import { createClient } from '@/lib/supabase/server'
 import { isAdminAuthConfigured } from '@/lib/admin/config-validator'
 import { adminRateLimit, safeApplyRateLimit } from '@/lib/rate-limit-redis'
 
@@ -51,28 +50,16 @@ export async function POST(request: NextRequest) {
     // Create admin session
     await createAdminSession(result.userId!, email)
 
-    // Get super admin status
-    const supabase = await createClient()
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_super_user')
-      .eq('id', result.userId)
-      .single()
-
-    const isSuperAdmin = profile?.is_super_user === true
-
     // Log successful login
     console.log('[AdminAuth] Successful admin login:', {
       email,
       userId: result.userId,
-      isSuperAdmin,
       timestamp: new Date().toISOString()
     })
 
     return NextResponse.json({
       success: true,
-      message: 'Admin authentication successful',
-      isSuperAdmin
+      message: 'Admin authentication successful'
     })
 
   } catch (error) {

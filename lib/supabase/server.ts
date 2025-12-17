@@ -9,7 +9,7 @@ export async function createClient() {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      'Missing Supabase environment variables. Please check the Vars section in v0 sidebar.'
+      'Missing Supabase environment variables. Create a .env.local (cp .env.example .env.local), set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then restart the dev server.'
     )
   }
 

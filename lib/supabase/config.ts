@@ -4,12 +4,15 @@ export function getSupabaseConfig() {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      `Missing Supabase environment variables. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your environment variables.
+      `Missing Supabase environment variables.
 
-You can find these values in your Supabase project settings:
-https://supabase.com/dashboard/project/_/settings/api
+Local setup:
+- Copy ".env.example" to ".env.local" in the project root
+- Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+- Restart the dev server after editing env files
 
-Add them to the "Vars" section in the v0 sidebar.`
+You can find the values in Supabase project settings:
+https://supabase.com/dashboard/project/_/settings/api`
     )
   }
 

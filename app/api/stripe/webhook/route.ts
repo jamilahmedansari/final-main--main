@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
+import { sendTemplateEmail } from '@/lib/email/service'
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2025-11-17.clover',
@@ -144,6 +145,23 @@ export async function POST(request: NextRequest) {
             console.error('[StripeWebhook] Failed to create commission:', commissionError)
           } else {
             console.log(`[StripeWebhook] Created commission: $${commissionAmount.toFixed(2)} for employee ${employeeId}`)
+
+            // Send commission earned email (non-blocking)
+            const { data: employeeProfile } = await supabase
+              .from('profiles')
+              .select('email, full_name')
+              .eq('id', employeeId)
+              .single()
+
+            if (employeeProfile?.email) {
+              sendTemplateEmail('commission-earned', employeeProfile.email, {
+                userName: employeeProfile.full_name || 'there',
+                commissionAmount: `$${commissionAmount.toFixed(2)}`,
+                actionUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard/commissions`,
+              }).catch(error => {
+                console.error('[StripeWebhook] Failed to send commission email:', error)
+              })
+            }
           }
 
           // Update employee coupon usage count (skip for special promo codes)
@@ -174,6 +192,27 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('[StripeWebhook] Payment completed for user:', metadata.user_id)
+
+        // Send subscription confirmation email (non-blocking)
+        if (subscription) {
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', metadata.user_id)
+            .single()
+
+          if (userProfile?.email) {
+            const planName = metadata.plan_type || 'Subscription'
+            sendTemplateEmail('subscription-confirmation', userProfile.email, {
+              userName: userProfile.full_name || 'there',
+              subscriptionPlan: planName,
+              actionUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard`,
+            }).catch(error => {
+              console.error('[StripeWebhook] Failed to send subscription confirmation email:', error)
+            })
+          }
+        }
+
         break
       }
 

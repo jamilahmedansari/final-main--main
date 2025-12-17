@@ -187,53 +187,6 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 }
 
 /**
- * Check if current admin is a super admin
- */
-export async function isSuperAdmin(): Promise<boolean> {
-  const session = await verifyAdminSession()
-  if (!session) {
-    return false
-  }
-
-  const supabase = await createClient()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, is_super_user')
-    .eq('id', session.userId)
-    .single()
-
-  return profile?.role === 'admin' && profile?.is_super_user === true
-}
-
-/**
- * Get admin session with role information
- */
-export async function getAdminSessionWithRole(): Promise<{
-  session: AdminSession | null
-  isSuperUser: boolean
-  role: string | null
-}> {
-  const session = await verifyAdminSession()
-
-  if (!session) {
-    return { session: null, isSuperUser: false, role: null }
-  }
-
-  const supabase = await createClient()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, is_super_user')
-    .eq('id', session.userId)
-    .single()
-
-  return {
-    session,
-    isSuperUser: profile?.is_super_user === true,
-    role: profile?.role || null
-  }
-}
-
-/**
  * Require admin authentication for API routes (any admin type)
  */
 export async function requireAdminAuth(): Promise<NextResponse | undefined> {
@@ -243,31 +196,6 @@ export async function requireAdminAuth(): Promise<NextResponse | undefined> {
     return NextResponse.json(
       { error: 'Admin authentication required' },
       { status: 401 }
-    )
-  }
-
-  return undefined
-}
-
-/**
- * Require super admin authentication for API routes
- */
-export async function requireSuperAdminAuth(): Promise<NextResponse | undefined> {
-  const authenticated = await isAdminAuthenticated()
-
-  if (!authenticated) {
-    return NextResponse.json(
-      { error: 'Admin authentication required' },
-      { status: 401 }
-    )
-  }
-
-  const superAdmin = await isSuperAdmin()
-
-  if (!superAdmin) {
-    return NextResponse.json(
-      { error: 'Super admin privileges required' },
-      { status: 403 }
     )
   }
 

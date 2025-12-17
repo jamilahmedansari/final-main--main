@@ -2,15 +2,24 @@ import { NextRequest, NextResponse } from "next/server"
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
 
-const redisUrl = process.env.KV_REST_API_URL || process.env.REDIS_URL
+// Upstash REST URL must be an https:// URL (KV_REST_API_URL).
+// Do not attempt to use REDIS_URL (rediss://) with @upstash/redis.
+const redisUrl = process.env.KV_REST_API_URL
 const redisToken = process.env.KV_REST_API_TOKEN
 
-const redis = redisUrl && redisToken
-  ? new Redis({
-    url: redisUrl,
-    token: redisToken,
-  })
-  : null
+let redis: Redis | null = null
+
+if (redisUrl && redisToken && redisUrl.trim().startsWith('https://')) {
+  try {
+    redis = new Redis({
+      url: redisUrl.trim(),
+      token: redisToken.trim(),
+    })
+  } catch (error) {
+    console.warn('[RateLimit] Invalid Upstash configuration, falling back to in-memory rate limiting')
+    redis = null
+  }
+}
 
 function createRateLimiter(prefix: string, limiter: ReturnType<typeof Ratelimit.fixedWindow>) {
   if (!redis) return null

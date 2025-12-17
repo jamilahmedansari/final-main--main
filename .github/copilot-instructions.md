@@ -1,52 +1,45 @@
-# Talk-To-My-Lawyer - Copilot Instructions
-
-> AI-powered legal letter SaaS. Full reference: see consolidated documentation in project root.
-
-## Core Workflow
-```
+# Project Context
 User → Letter Form → AI Draft (GPT-4 Turbo) → Admin Review → Approved PDF
-```
 
 ## Tech Stack
 Next.js 16 (App Router, React 19) | Supabase (Postgres + RLS) | OpenAI via Vercel AI SDK | Stripe | pnpm
 
 ## Role Authorization (Critical)
 
-| Role | Access | Constraint |
-|------|--------|------------|
-| `subscriber` | Own letters, subscription | First letter free, then credits |
-| `employee` | Own coupons, commissions | **NO letter access** (RLS enforced) |
-| `admin` | `/secure-admin-gateway/*` | Env-based auth + portal key |
+| Role         | Access                    | Constraint                          |
+| ------------ | ------------------------- | ----------------------------------- |
+| `subscriber` | Own letters, subscription | First letter free, then credits     |
+| `employee`   | Own coupons, commissions  | **NO letter access** (RLS enforced) |
+| `admin`      | `/secure-admin-gateway/*` | **Single Admin only**. Env-based auth + portal key |
 
 > ⚠️ `is_super_user` = unlimited letters, NOT admin privilege
+
+### Single Admin Model (Critical)
+
+- There is **exactly ONE admin account** responsible for:
+  - **Reviewing, editing/improving, approving/rejecting** letters
+  - Managing the **admin dashboard analytics**
+  - Admin access is **only** via `/secure-admin-gateway/*` (separate portal session).
 
 ## Supabase Client Pattern
 ```typescript
 // Server (API routes, server components)
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from '@/lib/supabase/server'
 const supabase = await createClient()
 
-// Client components only
-import { createClient } from "@/lib/supabase/client"
-```
-
-## API Route Pattern
-```typescript
-export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  // RLS enforces row-level access automatically
-}
+// Client (React hooks)
+import { createClient } from '@/lib/supabase/client'
+const supabase = createClient()
 ```
 
 ## Letter Status Flow
-`draft` → `generating` → `pending_review` → `under_review` → `approved`/`rejected` → `completed`
+`pending_review` → `under_review` (locked by admin) → `approved` (PDF ready) | `rejected` (needs info)
+Always audit status changes: `await log_letter_audit(letter_id, user_id, action, details)`
 
-Always audit status changes:
-```typescript
-await supabase.rpc('log_letter_audit', { p_letter_id, p_action, p_old_status, p_new_status, p_notes })
-```
+## UI & Implementation
+- Free trial: `count === 0` letters check before requiring subscription
+- UI: shadcn/ui from `@/components/ui/*`, toast via `sonner`
+- Admin routes: Verify with `isAdminAuthenticated()` from `lib/auth/admin-session.ts`
 
 ## Key Database Functions
 - `check_letter_allowance(u_id)` → `{has_allowance, remaining, plan_name, is_super}`
@@ -94,7 +87,11 @@ Notes:
 2. **Employee isolation** - No letter content access (business requirement)
 3. **Admin auth** - Separate system via `lib/auth/admin-session.ts` (30min timeout)
 
-## Common Patterns
-- Free trial: `count === 0` letters check before requiring subscription
-- UI: shadcn/ui from `@/components/ui/*`, toast via `sonner`
-- Admin routes: Verify with `isAdminAuthenticated()` from `lib/auth/admin-session.ts`
+## Secure Admin Portal Routes
+- `/secure-admin-gateway/login` - portal login (email/password + portal key)
+- `/secure-admin-gateway/dashboard` - **single admin** dashboard (includes analytics)
+- `/secure-admin-gateway/review` - review center
+- `/secure-admin-gateway/review/[id]` - review a letter
+- `/secure-admin-gateway/dashboard/letters` - review queue (admin only)
+- `/secure-admin-gateway/dashboard/analytics` - analytics (admin only)
+- `/secure-admin-gateway/dashboard/commissions` - commissions (admin only)
