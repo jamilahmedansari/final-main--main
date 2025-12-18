@@ -12,11 +12,29 @@ User → Letter Form → AI Draft (GPT-4 Turbo) → Admin Review → PDF Downloa
 ## Tech Stack
 - **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, shadcn/ui
 - **Backend**: Supabase (PostgreSQL + RLS + Auth), Stripe, OpenAI via Vercel AI SDK
+- **Email**: SendGrid / Brevo (with queue system)
+- **PDF**: jsPDF for letter generation
 - **Package Manager**: pnpm
 
 ---
 
-## ⚠️ CRITICAL: Role Authorization
+## Commands
+
+```bash
+pnpm install          # Install dependencies
+pnpm dev              # Development server (localhost:3000)
+pnpm build            # Production build (must pass)
+pnpm lint             # ESLint check
+pnpm start            # Start production server
+pnpm start:prod       # Validate env + start production
+pnpm db:migrate       # Run database migrations
+pnpm health-check     # Check application health
+pnpm validate-env     # Validate environment variables
+```
+
+---
+
+## CRITICAL: Role Authorization
 
 | Role | Access | Hard Constraint |
 |------|--------|-----------------|
@@ -26,19 +44,19 @@ User → Letter Form → AI Draft (GPT-4 Turbo) → Admin Review → PDF Downloa
 
 ### is_super_user vs admin
 ```typescript
-// ❌ WRONG - is_super_user is NOT admin
+// WRONG - is_super_user is NOT admin
 if (profile.is_super_user) { /* admin logic */ }
 
-// ✅ CORRECT - is_super_user means unlimited letters ONLY
+// CORRECT - is_super_user means unlimited letters ONLY
 if (profile.is_super_user) { /* skip credit check */ }
 
-// ✅ CORRECT - admin check
+// CORRECT - admin check
 if (profile.role === 'admin') { /* admin logic */ }
 ```
 
 ---
 
-## ⚠️ CRITICAL: Letter Status Workflow
+## CRITICAL: Letter Status Workflow
 
 ```
 draft → generating → pending_review → under_review → approved → completed
@@ -63,7 +81,7 @@ await supabase.rpc('log_letter_audit', {
 
 ---
 
-## ⚠️ CRITICAL: Supabase Client Usage
+## CRITICAL: Supabase Client Usage
 
 ```typescript
 // Server components/API routes - ALWAYS use server client
@@ -98,7 +116,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     // 3. Business logic (RLS auto-enforces access)
-    
+
     // 4. Response
     return NextResponse.json({ success: true, data: result })
   } catch (error) {
@@ -118,30 +136,64 @@ export async function POST(request: NextRequest) {
 | `deduct_letter_allowance(u_id)` | Deducts 1 credit, returns boolean |
 | `log_letter_audit(...)` | Creates audit trail entry |
 | `validate_coupon(code)` | Validates employee coupon |
+| `get_employee_coupon(u_id)` | Gets employee's coupon code |
 
 ---
 
-## Project Structure (Key Paths)
+## Project Structure
 
 ```
-app/api/generate-letter/     # AI letter generation
-app/api/letters/[id]/        # approve, reject, improve, pdf, send-email
-app/dashboard/               # Subscriber dashboard
-app/secure-admin-gateway/    # Admin portal (separate auth)
-lib/auth/admin-session.ts    # Admin session (30min timeout)
-lib/supabase/server.ts       # Server Supabase client
-scripts/001-011*.sql         # Database migrations (run in order)
-```
+app/
+├── api/
+│   ├── generate-letter/       # AI letter generation
+│   ├── letters/[id]/          # approve, reject, improve, pdf, send-email, audit
+│   ├── admin/                 # coupons, email-queue, analytics
+│   ├── admin-auth/            # login, logout
+│   ├── auth/                  # reset-password, update-password
+│   ├── subscriptions/         # check-allowance, activate, reset-monthly
+│   ├── gdpr/                  # export-data, delete-account, accept-privacy-policy
+│   ├── cron/                  # process-email-queue
+│   ├── health/                # health checks
+│   └── stripe/webhook/        # Stripe webhook handler
+├── dashboard/                 # Subscriber dashboard
+├── secure-admin-gateway/      # Admin portal (separate auth)
+│   ├── login/
+│   ├── review/
+│   └── dashboard/             # users, letters, coupons, analytics, commissions
+└── auth/                      # login, signup, forgot-password, reset-password
 
----
+lib/
+├── supabase/
+│   ├── server.ts              # Server Supabase client
+│   ├── client.ts              # Browser Supabase client
+│   └── middleware.ts          # Auth middleware
+├── auth/
+│   ├── admin-session.ts       # Admin session (30min timeout)
+│   ├── admin-guard.ts         # Admin route protection
+│   └── get-user.ts            # User helper
+├── email/
+│   ├── service.ts             # Email service
+│   ├── queue.ts               # Email queue
+│   ├── templates.ts           # Email templates
+│   └── providers/             # SendGrid, Brevo, Console
+├── pdf/
+│   ├── generator.ts           # PDF letter generation
+│   └── types.ts               # PDF types
+├── logging/
+│   └── structured-logger.ts   # Structured logging
+├── security/
+│   └── input-sanitizer.ts     # Input sanitization
+├── errors/
+│   └── error-handler.ts       # Error handling utilities
+├── database.types.ts          # Supabase generated types
+├── rate-limit.ts              # Rate limiting
+└── utils.ts                   # General utilities
 
-## Commands
-
-```bash
-pnpm install    # Install dependencies
-pnpm dev        # Development server (localhost:3000)
-pnpm build      # Production build (must pass)
-pnpm lint       # ESLint check
+scripts/
+├── 001-022*.sql               # Database migrations (run in order)
+├── run-migrations.js          # Migration runner
+├── validate-env.js            # Environment validation
+└── health-check.js            # Health check script
 ```
 
 ---
@@ -153,6 +205,8 @@ pnpm lint       # ESLint check
 3. **Audit logging** - All letter status changes logged
 4. **Admin auth** - Separate system, env-based credentials
 5. **Secrets** - Never log API keys, use `process.env` only
+6. **Input sanitization** - Use `lib/security/input-sanitizer.ts`
+7. **Rate limiting** - Apply to public endpoints
 
 ---
 
@@ -163,3 +217,21 @@ pnpm lint       # ESLint check
 - **Admin routes**: Use `isAdminAuthenticated()` from `lib/auth/admin-session.ts`
 - **UI components**: Use `@/components/ui/*` (shadcn/ui), toast via `sonner`
 - **TypeScript**: Use types from `lib/database.types.ts`, no `any`
+- **Email**: Use email queue for async delivery (`lib/email/queue.ts`)
+- **PDF**: Generate via `lib/pdf/generator.ts`
+- **Logging**: Use structured logger for production logs
+
+---
+
+## Environment Variables
+
+Required environment variables (validated by `pnpm validate-env`):
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role (server only)
+- `OPENAI_API_KEY` - OpenAI API key for letter generation
+- `STRIPE_SECRET_KEY` - Stripe secret key
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret
+- `ADMIN_USERNAME` - Admin portal username
+- `ADMIN_PASSWORD` - Admin portal password
+- `ADMIN_PORTAL_KEY` - Admin portal access key
