@@ -1,7 +1,7 @@
 -- Email Queue Table for reliable email delivery
 CREATE TABLE IF NOT EXISTS public.email_queue (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  to TEXT NOT NULL,
+  "to" TEXT NOT NULL,
   subject TEXT NOT NULL,
   html TEXT,
   text TEXT,
