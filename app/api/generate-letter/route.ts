@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { openai } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import { letterGenerationRateLimit, safeApplyRateLimit } from '@/lib/rate-limit-redis'
+import { validateLetterGenerationRequest } from '@/lib/validation/letter-schema'
 
 export const runtime = "nodejs"
 
@@ -64,9 +65,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { letterType, intakeData } = body
 
-    if (!letterType || !intakeData) {
-      return NextResponse.json({ error: "letterType and intakeData are required" }, { status: 400 })
+    // Comprehensive input validation and sanitization
+    const validation = validateLetterGenerationRequest(letterType, intakeData)
+    if (!validation.valid) {
+      console.error("[GenerateLetter] Validation failed:", validation.errors)
+      return NextResponse.json(
+        {
+          error: "Invalid input data",
+          details: validation.errors
+        },
+        { status: 400 }
+      )
     }
+
+    // Use sanitized data
+    const sanitizedLetterType = letterType
+    const sanitizedIntakeData = validation.data!
 
     if (!process.env.OPENAI_API_KEY) {
       console.error("[GenerateLetter] Missing OPENAI_API_KEY")
@@ -96,9 +110,9 @@ export async function POST(request: NextRequest) {
       .from("letters")
       .insert({
         user_id: user.id,
-        letter_type: letterType,
-        title: `${letterType} - ${new Date().toLocaleDateString()}`,
-        intake_data: intakeData,
+        letter_type: sanitizedLetterType,
+        title: `${sanitizedLetterType} - ${new Date().toLocaleDateString()}`,
+        intake_data: sanitizedIntakeData,
         status: "generating",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -117,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // 5. Generate letter using AI SDK with OpenAI
-      const prompt = buildPrompt(letterType, intakeData)
+      const prompt = buildPrompt(sanitizedLetterType, sanitizedIntakeData)
 
       const { text: generatedContent } = await generateText({
         model: openai("gpt-4-turbo"),
@@ -206,30 +220,58 @@ export async function POST(request: NextRequest) {
 }
 
 function buildPrompt(letterType: string, intakeData: Record<string, unknown>) {
-  const fields = (key: string) => `${key.replace(/_/g, " ")}: ${String(intakeData[key] ?? "")}`
-  const amountField = intakeData["amountDemanded"] ? `Amount: $${intakeData["amountDemanded"]}` : ""
+  const fields = (key: string) => {
+    const value = intakeData[key]
+    if (value === undefined || value === null || value === '') return ''
+    const fieldName = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).replace(/_/g, ' ')
+    return `${fieldName}: ${String(value)}`
+  }
 
-  return [
+  const amountField = intakeData["amountDemanded"] ?
+    `Amount Demanded: $${Number(intakeData["amountDemanded"]).toLocaleString()}` : ""
+
+  const deadlineField = intakeData["deadlineDate"] ?
+    `Deadline: ${intakeData["deadlineDate"]}` : ""
+
+  const incidentDateField = intakeData["incidentDate"] ?
+    `Incident Date: ${intakeData["incidentDate"]}` : ""
+
+  const basePrompt = [
     `Draft a professional ${letterType} letter with the following details:`,
     "",
+    "Sender Information:",
     fields("senderName"),
     fields("senderAddress"),
+    fields("senderEmail"),
+    fields("senderPhone"),
+    "",
+    "Recipient Information:",
     fields("recipientName"),
     fields("recipientAddress"),
+    fields("recipientEmail"),
+    fields("recipientPhone"),
+    "",
+    "Case Details:",
     fields("issueDescription"),
     fields("desiredOutcome"),
     amountField,
+    deadlineField,
+    incidentDateField,
+    fields("additionalDetails"),
     "",
     "Requirements:",
     "- Write a professional, legally sound letter (300-500 words)",
-    "- Include proper date and addresses",
-    "- Present facts clearly",
-    "- State clear demands with deadlines",
+    "- Include proper date and formal letter format",
+    "- Present facts clearly and objectively",
+    "- State clear demands with specific deadlines (if applicable)",
     "- Maintain professional legal tone throughout",
-    "- Format as a complete letter with proper structure",
+    "- Include proper salutations and closing",
+    "- Format as a complete letter with all standard elements",
+    "- Avoid any legal advice beyond standard letter writing",
     "",
-    "Return only the letter content, no additional commentary or explanations."
+    "Important: Only return the letter content itself, no explanations or commentary."
   ]
-    .filter(Boolean)
-    .join("\n")
+
+  // Filter out empty lines and join
+  return basePrompt.filter(Boolean).join("\n")
 }
