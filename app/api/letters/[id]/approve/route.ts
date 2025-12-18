@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminAuth, getAdminSession } from '@/lib/auth/admin-session'
 import { adminRateLimit, safeApplyRateLimit } from '@/lib/rate-limit-redis'
 import { sendTemplateEmail } from '@/lib/email/service'
+import { validateAdminRequest, generateAdminCSRF } from '@/lib/security/csrf'
+import { sanitizeString } from '@/lib/security/input-sanitizer'
 
 export async function POST(
   request: NextRequest,
