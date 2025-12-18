@@ -1,6 +1,23 @@
-import { createClient } from '@supabase/supabase-js'
-import { EmailMessage, EmailResult } from './types'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { EmailMessage } from './types'
 import { getEmailService } from './service'
+
+// Database row type matching the actual schema (snake_case)
+interface EmailQueueRow {
+  id: string
+  to: string
+  subject: string
+  html: string | null
+  text: string | null
+  status: 'pending' | 'sent' | 'failed'
+  attempts: number
+  max_retries: number
+  next_retry_at: string | null
+  error: string | null
+  created_at: string
+  sent_at: string | null
+  updated_at: string
+}
 
 export interface EmailQueueItem {
   id?: string
@@ -22,8 +39,8 @@ export interface EmailQueueItem {
  * Provides reliable email delivery with retry logic and persistence
  */
 export class EmailQueue {
-  private supabase: ReturnType<typeof createClient>
-  private tableName = 'email_queue'
+  private supabase: SupabaseClient
+  private tableName = 'email_queue' as const
 
   constructor() {
     this.supabase = createClient(
