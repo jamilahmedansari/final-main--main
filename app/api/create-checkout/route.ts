@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { subscriptionRateLimit, safeApplyRateLimit } from '@/lib/rate-limit-redis'
+import { validateCouponWithFraudDetection } from '@/lib/fraud-detection/coupon-fraud'
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2025-11-17.clover',
