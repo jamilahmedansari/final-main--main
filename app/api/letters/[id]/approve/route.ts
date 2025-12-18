@@ -21,6 +21,15 @@ export async function POST(
     const authError = await requireAdminAuth()
     if (authError) return authError
 
+    // CSRF Protection for admin actions
+    const csrfResult = await validateAdminRequest(request)
+    if (!csrfResult.valid) {
+      return NextResponse.json(
+        { error: 'CSRF validation failed', details: csrfResult.error },
+        { status: 403 }
+      )
+    }
+
     const { id } = await params
     const supabase = await createClient()
     const adminSession = await getAdminSession()
@@ -30,6 +39,14 @@ export async function POST(
 
     if (!finalContent) {
       return NextResponse.json({ error: 'Final content is required for approval' }, { status: 400 })
+    }
+
+    // Validate and sanitize input
+    const sanitizedFinalContent = sanitizeString(finalContent, 10000) // 10k char limit
+    const sanitizedReviewNotes = reviewNotes ? sanitizeString(reviewNotes, 2000) : null
+
+    if (!sanitizedFinalContent) {
+      return NextResponse.json({ error: 'Invalid final content provided' }, { status: 400 })
     }
 
     const { data: letter } = await supabase
