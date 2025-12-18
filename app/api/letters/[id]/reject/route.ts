@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminAuth, getAdminSession } from '@/lib/auth/admin-session'
 import { sendTemplateEmail } from '@/lib/email/service'
+import { validateAdminRequest, generateAdminCSRF } from '@/lib/security/csrf'
+import { sanitizeString } from '@/lib/security/input-sanitizer'
 
 export async function POST(
   request: NextRequest,
@@ -11,6 +13,15 @@ export async function POST(
     // Verify admin authentication
     const authError = await requireAdminAuth()
     if (authError) return authError
+
+    // CSRF Protection for admin actions
+    const csrfResult = await validateAdminRequest(request)
+    if (!csrfResult.valid) {
+      return NextResponse.json(
+        { error: 'CSRF validation failed', details: csrfResult.error },
+        { status: 403 }
+      )
+    }
 
     const { id } = await params
     const supabase = await createClient()
@@ -23,6 +34,14 @@ export async function POST(
       return NextResponse.json({ error: 'Rejection reason is required' }, { status: 400 })
     }
 
+    // Validate and sanitize input
+    const sanitizedRejectionReason = sanitizeString(rejectionReason, 1000) // 1k char limit
+    const sanitizedReviewNotes = reviewNotes ? sanitizeString(reviewNotes, 2000) : null
+
+    if (!sanitizedRejectionReason) {
+      return NextResponse.json({ error: 'Invalid rejection reason provided' }, { status: 400 })
+    }
+
     const { data: letter } = await supabase
       .from('letters')
       .select('status, user_id, title')
@@ -33,8 +52,8 @@ export async function POST(
       .from('letters')
       .update({
         status: 'rejected',
-        rejection_reason: rejectionReason,
-        review_notes: reviewNotes,
+        rejection_reason: sanitizedRejectionReason,
+        review_notes: sanitizedReviewNotes,
         reviewed_by: adminSession?.userId,
         reviewed_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -48,7 +67,7 @@ export async function POST(
       p_action: 'rejected',
       p_old_status: letter?.status || 'unknown',
       p_new_status: 'rejected',
-      p_notes: `Rejection reason: ${rejectionReason}`
+      p_notes: `Rejection reason: ${sanitizedRejectionReason}`
     })
 
     // Send rejection notification email (non-blocking)

@@ -6,6 +6,44 @@ import { sendTemplateEmail } from '@/lib/email/service'
 import { validateAdminRequest, generateAdminCSRF } from '@/lib/security/csrf'
 import { sanitizeString } from '@/lib/security/input-sanitizer'
 
+// GET endpoint to provide CSRF token
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    // Verify admin authentication
+    const authError = await requireAdminAuth()
+    if (authError) return authError
+
+    try {
+      const csrfData = generateAdminCSRF()
+
+      const response = NextResponse.json({
+        csrfToken: csrfData.signedToken,
+        expiresAt: csrfData.expiresAt
+      })
+
+      // Set CSRF cookie
+      response.headers.set('Set-Cookie', csrfData.cookieHeader)
+
+      return response
+    } catch (csrfError) {
+      console.error('[Approve] CSRF generation error:', csrfError)
+      return NextResponse.json(
+        { error: 'Failed to generate CSRF token' },
+        { status: 500 }
+      )
+    }
+  } catch (error) {
+    console.error('[Approve] CSRF token endpoint error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -59,8 +97,8 @@ export async function POST(
       .from('letters')
       .update({
         status: 'approved',
-        final_content: finalContent,
-        review_notes: reviewNotes,
+        final_content: sanitizedFinalContent,
+        review_notes: sanitizedReviewNotes,
         reviewed_by: adminSession?.userId,
         reviewed_at: new Date().toISOString(),
         approved_at: new Date().toISOString(),
@@ -75,7 +113,7 @@ export async function POST(
       p_action: 'approved',
       p_old_status: letter?.status || 'unknown',
       p_new_status: 'approved',
-      p_notes: reviewNotes || 'Letter approved by admin'
+      p_notes: sanitizedReviewNotes || 'Letter approved by admin'
     })
 
     // Send approval notification email (non-blocking)
