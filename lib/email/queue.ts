@@ -221,3 +221,30 @@ export function getEmailQueue(): EmailQueue {
   }
   return queueInstance
 }
+
+/**
+ * Process email queue and return results
+ * Used by cron endpoint
+ */
+export async function processEmailQueue(): Promise<{
+  processed: number
+  failed: number
+  remaining: number
+}> {
+  const queue = getEmailQueue()
+  
+  // Get initial stats
+  const beforeStats = await queue.getStats()
+  
+  // Process pending emails
+  await queue.processPending()
+  
+  // Get updated stats
+  const afterStats = await queue.getStats()
+  
+  return {
+    processed: beforeStats.pending - afterStats.pending,
+    failed: afterStats.failed - beforeStats.failed,
+    remaining: afterStats.pending
+  }
+}

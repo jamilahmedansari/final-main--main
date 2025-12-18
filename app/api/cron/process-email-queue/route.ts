@@ -15,12 +15,15 @@ import { processEmailQueue } from '@/lib/email/queue'
  * - Pass secret as ?secret=YOUR_CRON_SECRET or Authorization: Bearer YOUR_CRON_SECRET
  *
  * @example Vercel Cron configuration (vercel.json):
+ * ```json
  * {
  *   "crons": [{
  *     "path": "/api/cron/process-email-queue",
- *     "schedule": "*/10 * * * *"
+ *     "schedule": "star/10 star star star star"
  *   }]
  * }
+ * ```
+ * (Replace "star" with asterisk in actual config)
  *
  * @example External cron with curl:
  * curl -X POST https://yourdomain.com/api/cron/process-email-queue \
