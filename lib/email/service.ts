@@ -8,6 +8,8 @@ import type {
 } from './types'
 import { SendGridProvider } from './providers/sendgrid'
 import { BrevoProvider } from './providers/brevo'
+import { ResendProvider, createResendProvider } from './providers/resend'
+import { SMTPProvider, createSMTPProvider } from './providers/smtp'
 import { ConsoleProvider } from './providers/console'
 import { renderTemplate } from './templates'
 
@@ -18,8 +20,33 @@ class EmailService {
   private fromName: string
 
   constructor() {
+    // Initialize providers
     this.providers.set('sendgrid', new SendGridProvider())
     this.providers.set('brevo', new BrevoProvider())
+
+    // Initialize Resend provider if configured
+    if (process.env.RESEND_API_KEY) {
+      try {
+        this.providers.set('resend', createResendProvider(process.env.RESEND_API_KEY))
+      } catch (error) {
+        console.warn('[EmailService] Failed to initialize Resend provider:', error)
+      }
+    }
+
+    // Initialize SMTP provider if configured
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        this.providers.set('smtp', createSMTPProvider({
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT || (process.env.SMTP_SECURE === 'true' ? '465' : '587'),
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS
+        }))
+      } catch (error) {
+        console.warn('[EmailService] Failed to initialize SMTP provider:', error)
+      }
+    }
+
     this.providers.set('console', new ConsoleProvider())
 
     this.fromEmail = process.env.EMAIL_FROM || process.env.SENDGRID_FROM || 'noreply@talk-to-my-lawyer.com'
@@ -37,12 +64,14 @@ class EmailService {
       }
     }
 
-    if (this.providers.get('sendgrid')!.isConfigured()) {
-      return 'sendgrid'
-    }
+    // Check provider priority order
+    const providerPriority: EmailProvider[] = ['sendgrid', 'brevo', 'resend', 'smtp']
 
-    if (this.providers.get('brevo')!.isConfigured()) {
-      return 'brevo'
+    for (const providerName of providerPriority) {
+      const provider = this.providers.get(providerName)
+      if (provider && provider.isConfigured()) {
+        return providerName
+      }
     }
 
     if (process.env.NODE_ENV === 'development') {

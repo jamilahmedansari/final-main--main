@@ -47,12 +47,23 @@ export interface EmailConfig {
 export type EmailTemplate =
   | 'welcome'
   | 'password-reset'
+  | 'password-reset-confirmation'
   | 'letter-approved'
   | 'letter-rejected'
+  | 'letter-generated'
+  | 'letter-under-review'
   | 'commission-earned'
+  | 'commission-paid'
   | 'subscription-confirmation'
   | 'subscription-renewal'
+  | 'subscription-cancelled'
+  | 'payment-failed'
+  | 'account-suspended'
+  | 'free-trial-ending'
+  | 'onboarding-complete'
   | 'admin-alert'
+  | 'security-alert'
+  | 'system-maintenance'
 
 export interface TemplateData {
   userName?: string
@@ -62,5 +73,17 @@ export interface TemplateData {
   subscriptionPlan?: string
   alertMessage?: string
   actionUrl?: string
+  loginUrl?: string
+  resetUrl?: string
+  rejectionReason?: string
+  reviewNotes?: string
+  pendingReviews?: number
+  daysUntilExpiry?: number
+  amountDue?: number
+  nextBillingDate?: string
+  suspensionReason?: string
+  trialDaysRemaining?: number
+  completedSteps?: number
+  totalSteps?: number
   [key: string]: unknown
 }
