@@ -32,6 +32,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { planType, couponCode } = body
 
+    const planConfig: Record<string, { price: number, letters: number, planType: string, name: string }> = {
+      'one_time': { price: 299, letters: 1, planType: 'one_time', name: 'Single Letter' },
+      'standard_4_month': { price: 299, letters: 4, planType: 'standard_4_month', name: 'Monthly Plan' },
+      'premium_8_month': { price: 599, letters: 8, planType: 'premium_8_month', name: 'Yearly Plan' }
+    }
+
+    const selectedPlan = planConfig[planType]
+    if (!selectedPlan) {
+      return NextResponse.json({ error: 'Invalid plan type' }, { status: 400 })
+    }
+
+    const basePrice = selectedPlan.price
+
     let discount = 0
     let employeeId = null
     let isSuperUserCoupon = false
@@ -45,6 +58,37 @@ export async function POST(request: NextRequest) {
         isSuperUserCoupon = false // Not a super user coupon
         couponId = null
       } else {
+        // Enhanced coupon validation with fraud detection
+        console.log('[Checkout] Validating coupon with fraud detection:', couponCode)
+        const couponValidation = await validateCouponWithFraudDetection(couponCode, request, user.id)
+
+        if (!couponValidation.isValid) {
+          console.error('[Checkout] Coupon validation failed:', {
+            couponCode,
+            error: couponValidation.error,
+            fraudRisk: couponValidation.fraudResult?.riskScore
+          })
+
+          return NextResponse.json({
+            error: couponValidation.error || 'Invalid coupon code',
+            fraudDetection: couponValidation.fraudResult ? {
+              riskScore: couponValidation.fraudResult.riskScore,
+              action: couponValidation.fraudResult.action,
+              reasons: couponValidation.fraudResult.reasons
+            } : undefined
+          }, { status: 400 })
+        }
+
+        // Log fraud detection results for monitoring
+        if (couponValidation.fraudResult) {
+          console.warn('[Checkout] Fraud detection result:', {
+            couponCode,
+            riskScore: couponValidation.fraudResult.riskScore,
+            action: couponValidation.fraudResult.action,
+            reasons: couponValidation.fraudResult.reasons
+          })
+        }
+
         // Check employee coupons in database (including special promo codes)
         const { data: coupon } = await supabase
           .from('employee_coupons')
@@ -62,22 +106,31 @@ export async function POST(request: NextRequest) {
           if (discount === 100) {
             isSuperUserCoupon = true
           }
+
+          // Log coupon usage with fraud detection context
+          await supabase
+            .from('coupon_usage')
+            .insert({
+              user_id: user.id,
+              coupon_code: couponCode,
+              employee_id: employeeId,
+              // subscription_id will be added after successful checkout
+              discount_percent: discount,
+              amount_before: basePrice,
+              amount_after: finalPrice,
+              ip_address: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
+              user_agent: request.headers.get('user-agent') || 'unknown',
+              fraud_risk_score: couponValidation.fraudResult?.riskScore || 0,
+              fraud_detection_data: couponValidation.fraudResult || null,
+              created_at: new Date().toISOString()
+            }).catch(error => {
+              console.error('[Checkout] Failed to log coupon usage:', error)
+              // Don't block checkout for logging errors
+            })
         }
       }
     }
 
-    const planConfig: Record<string, { price: number, letters: number, planType: string, name: string }> = {
-      'one_time': { price: 299, letters: 1, planType: 'one_time', name: 'Single Letter' },
-      'standard_4_month': { price: 299, letters: 4, planType: 'standard_4_month', name: 'Monthly Plan' },
-      'premium_8_month': { price: 599, letters: 8, planType: 'premium_8_month', name: 'Yearly Plan' }
-    }
-
-    const selectedPlan = planConfig[planType]
-    if (!selectedPlan) {
-      return NextResponse.json({ error: 'Invalid plan type' }, { status: 400 })
-    }
-
-    const basePrice = selectedPlan.price
     const discountAmount = (basePrice * discount) / 100
     const finalPrice = basePrice - discountAmount
 

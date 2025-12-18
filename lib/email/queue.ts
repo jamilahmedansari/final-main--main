@@ -59,14 +59,14 @@ export class EmailQueue {
         .insert({
           to: Array.isArray(message.to) ? message.to.join(',') : message.to,
           subject: message.subject,
-          html: message.html,
-          text: message.text,
+          html: message.html ?? null,
+          text: message.text ?? null,
           status: 'pending',
           attempts: 0,
-          maxRetries,
-          nextRetryAt: new Date().toISOString(),
-          createdAt: new Date().toISOString()
-        })
+          max_retries: maxRetries,
+          next_retry_at: new Date().toISOString(),
+          created_at: new Date().toISOString()
+        } as EmailQueueRow)
         .select('id')
         .single()
 
@@ -92,7 +92,7 @@ export class EmailQueue {
         .from(this.tableName)
         .select('*')
         .eq('status', 'pending')
-        .lte('nextRetryAt', new Date().toISOString())
+        .lte('next_retry_at', new Date().toISOString())
         .limit(10) // Process 10 at a time
 
       if (error) {
@@ -118,14 +118,14 @@ export class EmailQueue {
   /**
    * Process a single queue item
    */
-  private async processItem(item: EmailQueueItem): Promise<void> {
+  private async processItem(row: EmailQueueRow): Promise<void> {
     try {
       const emailService = getEmailService()
       const message: EmailMessage = {
-        to: item.to,
-        subject: item.subject,
-        html: item.html,
-        text: item.text
+        to: row.to,
+        subject: row.subject,
+        ...(row.html && { html: row.html }),
+        ...(row.text && { text: row.text })
       }
 
       const result = await emailService.send(message)
@@ -136,27 +136,27 @@ export class EmailQueue {
           .from(this.tableName)
           .update({
             status: 'sent',
-            sentAt: new Date().toISOString()
-          })
-          .eq('id', item.id)
+            sent_at: new Date().toISOString()
+          } as Partial<EmailQueueRow>)
+          .eq('id', row.id)
 
-        console.log('[EmailQueue] Email sent successfully:', { id: item.id })
+        console.log('[EmailQueue] Email sent successfully:', { id: row.id })
       } else {
         // Handle retry
-        await this.handleRetry(item, result.error)
+        await this.handleRetryRow(row, result.error)
       }
     } catch (error) {
-      console.error('[EmailQueue] Error processing item:', { id: item.id, error })
-      await this.handleRetry(item, String(error))
+      console.error('[EmailQueue] Error processing item:', { id: row.id, error })
+      await this.handleRetryRow(row, String(error))
     }
   }
 
   /**
-   * Handle retry logic for failed emails
+   * Handle retry logic for failed emails (using EmailQueueRow from database)
    */
-  private async handleRetry(item: EmailQueueItem, error?: string): Promise<void> {
-    const newAttempts = (item.attempts || 0) + 1
-    const maxRetries = item.maxRetries || 3
+  private async handleRetryRow(row: EmailQueueRow, error?: string): Promise<void> {
+    const newAttempts = (row.attempts || 0) + 1
+    const maxRetries = row.max_retries || 3
 
     if (newAttempts >= maxRetries) {
       // Mark as failed
@@ -166,32 +166,32 @@ export class EmailQueue {
           status: 'failed',
           attempts: newAttempts,
           error: error || 'Max retries exceeded'
-        })
-        .eq('id', item.id)
+        } as Partial<EmailQueueRow>)
+        .eq('id', row.id)
 
       console.error('[EmailQueue] Email failed after max retries:', {
-        id: item.id,
+        id: row.id,
         attempts: newAttempts,
         error
       })
     } else {
       // Schedule next retry with exponential backoff
       const backoffMs = Math.pow(2, newAttempts - 1) * 5 * 60 * 1000 // 5min, 10min, 20min
-      const nextRetryAt = new Date(Date.now() + backoffMs).toISOString()
+      const next_retry_at = new Date(Date.now() + backoffMs).toISOString()
 
       await this.supabase
         .from(this.tableName)
         .update({
           attempts: newAttempts,
-          nextRetryAt,
+          next_retry_at,
           error: error || 'Retry scheduled'
-        })
-        .eq('id', item.id)
+        } as Partial<EmailQueueRow>)
+        .eq('id', row.id)
 
       console.log('[EmailQueue] Email retry scheduled:', {
-        id: item.id,
+        id: row.id,
         attempt: newAttempts,
-        nextRetryAt
+        next_retry_at
       })
     }
   }

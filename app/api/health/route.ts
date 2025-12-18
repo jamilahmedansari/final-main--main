@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { healthChecker } from '@/lib/monitoring/health-check'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -111,33 +112,42 @@ function getOverallStatus(services: HealthCheck['services']): 'healthy' | 'degra
 }
 
 export async function GET() {
-  const startTime = process.hrtime()
+  try {
+    // Use comprehensive health checker
+    const health = await healthChecker.checkHealth()
 
-  const [database, auth] = await Promise.all([
-    checkDatabase(),
-    checkAuth(),
-  ])
+    // Add legacy compatibility fields
+    const legacyHealth = {
+      status: health.status,
+      timestamp: health.timestamp,
+      version: process.env.npm_package_version || '1.0.0',
+      uptime: process.uptime(),
+      services: {
+        database: health.services.database,
+        auth: health.services.supabaseAuth,
+        stripe: {
+          status: 'healthy' as const,
+          details: { testMode: process.env.ENABLE_TEST_MODE === 'true' }
+        },
+        openai: health.services.openai,
+        redis: health.services.rateLimiting
+      },
+      environment: process.env.NODE_ENV || 'development',
+      metrics: health.metrics
+    }
 
-  const services = {
-    database,
-    auth,
-    stripe: checkStripe(),
-    openai: checkOpenAI(),
-    redis: checkRedis(),
+    const statusCode = health.status === 'unhealthy' ? 503 : 200
+
+    return NextResponse.json(legacyHealth, { status: statusCode })
+  } catch (error: any) {
+    console.error('[Health] Health check failed:', error)
+
+    // Fallback to basic health check
+    return NextResponse.json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: 'Health check failed',
+      details: error.message
+    }, { status: 503 })
   }
-
-  const overallStatus = getOverallStatus(services)
-
-  const health: HealthCheck = {
-    status: overallStatus,
-    timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '1.0.0',
-    uptime: process.uptime(),
-    services,
-    environment: process.env.NODE_ENV || 'development',
-  }
-
-  const statusCode = overallStatus === 'unhealthy' ? 503 : 200
-
-  return NextResponse.json(health, { status: statusCode })
 }

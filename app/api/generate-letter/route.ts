@@ -4,6 +4,7 @@ import { openai } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import { letterGenerationRateLimit, safeApplyRateLimit } from '@/lib/rate-limit-redis'
 import { validateLetterGenerationRequest } from '@/lib/validation/letter-schema'
+import { generateTextWithRetry, checkOpenAIHealth } from '@/lib/ai/openai-retry'
 
 export const runtime = "nodejs"
 
@@ -130,15 +131,26 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // 5. Generate letter using AI SDK with OpenAI
+      // 5. Generate letter using AI SDK with OpenAI (with retry logic)
       const prompt = buildPrompt(sanitizedLetterType, sanitizedIntakeData)
 
-      const { text: generatedContent } = await generateText({
-        model: openai("gpt-4-turbo"),
-        system: "You are a professional legal attorney drafting formal legal letters. Always produce professional, legally sound content with proper formatting.",
+      console.log('[GenerateLetter] Starting AI generation with retry logic')
+      const generationStartTime = Date.now()
+
+      const { text: generatedContent, attempts, duration } = await generateTextWithRetry({
         prompt,
+        system: "You are a professional legal attorney drafting formal legal letters. Always produce professional, legally sound content with proper formatting.",
         temperature: 0.7,
         maxOutputTokens: 2048,
+        model: "gpt-4-turbo"
+      })
+
+      const generationTime = Date.now() - generationStartTime
+      console.log(`[GenerateLetter] AI generation completed:`, {
+        attempts,
+        duration,
+        generationTime,
+        contentLength: generatedContent.length
       })
 
       if (!generatedContent) {
