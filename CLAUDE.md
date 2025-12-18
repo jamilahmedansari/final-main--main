@@ -36,21 +36,25 @@ pnpm validate-env     # Validate environment variables
 
 ## CRITICAL: Role Authorization
 
+There are exactly 3 roles. No "super admin" exists.
+
 | Role | Access | Hard Constraint |
 |------|--------|-----------------|
 | `subscriber` | Own letters, subscription, profile | First letter free, then credits |
 | `employee` | Own coupons, commissions only | **NEVER access letter content** |
 | `admin` | Full access via `/secure-admin-gateway` | Env-based auth + portal key |
 
-### is_super_user vs admin
+### is_super_user flag (NOT a role)
+`is_super_user` is a boolean flag on subscriber profiles for unlimited letters. It is NOT an admin role.
+
 ```typescript
 // WRONG - is_super_user is NOT admin
 if (profile.is_super_user) { /* admin logic */ }
 
-// CORRECT - is_super_user means unlimited letters ONLY
+// CORRECT - is_super_user means unlimited letters ONLY (premium subscriber)
 if (profile.is_super_user) { /* skip credit check */ }
 
-// CORRECT - admin check
+// CORRECT - admin check (single admin role, no super admin)
 if (profile.role === 'admin') { /* admin logic */ }
 ```
 
