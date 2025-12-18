@@ -5,6 +5,141 @@
 
 ---
 
+## Talk-to-my-Lawyer - Antigravity/Gemini Agent Rules
+
+> **Project**: Talk-to-my-Lawyer - AI-Powered Legal Letter Generation Platform  
+> **Live URL**: https://www.talk-to-my-lawyer.com  
+> **Stack**: Next.js 14/15 + Supabase + Stripe + OpenAI
+
+### 1. Build System & Package Manager
+
+- **Package Manager**: pnpm (required)  
+- **Node.js Version**: 18+ (22+ supported)  
+- **Framework**: Next.js 14/15 App Router, TypeScript strict mode  
+- **Build Output**: Standalone (`output: 'standalone'`)
+
+```bash
+pnpm install
+pnpm dev
+pnpm build
+pnpm start
+pnpm lint
+```
+
+### 2. Testing Framework
+
+- No automated tests; rely on `MANUAL_QA_SCRIPT.md`
+- Database functions tested in Supabase SQL editor
+- Stripe webhooks tested with Stripe CLI:
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+stripe trigger checkout.session.completed
+```
+
+### 3. Do Not Modify These Paths
+
+- `lib/database.types.ts` – generated Supabase types
+- `components/ui/*` – shadcn/ui primitives
+- `.env.local`, `.env.example` (except documenting new vars)
+- `middleware.ts`, `lib/supabase/middleware.ts`
+- `supabase/migrations/*.sql` – append-only
+- Do not reorganize `/app`, `/components`, `/lib`
+
+### 4. Forbidden APIs & Patterns
+
+- Do not use `cookies` from `next/headers`, `localStorage`, `sessionStorage`, or DOM APIs outside `use client` components
+- No new admin roles; rely on `is_super_user` flag only for unlimited letters
+- Never expose service-role keys client-side, avoid raw SQL in app code, do not bypass RLS
+- Avoid libraries: Prisma, tRPC, NextAuth, non-shadcn UI kits
+
+### 5. Required File Structure
+
+```
+/app (App Router only)
+  /api
+  /auth
+  /dashboard
+  /secure-admin-gateway
+/components
+  /ui
+  /admin
+/lib
+  /auth
+  /supabase
+    client.ts
+    server.ts
+    middleware.ts
+  database.types.ts
+/supabase
+  /migrations
+  /functions
+/scripts
+/public
+```
+
+### 6. Code Patterns
+
+- Follow provided API route template with Supabase auth checks
+- Server components/API use `@/lib/supabase/server`; client components use `@/lib/supabase/client`
+- Service role usage only in secure contexts (webhooks, cron jobs)
+
+### 7. Database Conventions
+
+- Core tables: `profiles`, `letters`, `subscriptions`, `employee_coupons`, `commissions`, `letter_audit_trail`, `coupon_usage`, `security_audit_log`, `security_config`
+- Roles: `subscriber`, `employee`, `admin` (single admin user)
+- Letter statuses: `draft`, `generating`, `pending_review`, `under_review`, `approved`, `completed`, `rejected`, `failed`
+- Enforce RLS via `auth.uid()` and helper `get_user_role()`
+
+### 8. Security Requirements
+
+- Supabase auth for users; admin portal uses its own credentials (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_PORTAL_KEY`)
+- Never expose service role key; rate-limit sensitive endpoints
+- Required env vars include Supabase, OpenAI, Stripe, admin, and app secrets (`NEXT_PUBLIC_APP_URL`, `CRON_SECRET`)
+- Security headers preconfigured in `next.config.mjs`
+
+### 9. Special Coupon Handling
+
+- `TALK3` coupon is hardcoded 100% discount; bypasses Stripe and commissions
+- Employee coupons format `EMP` + first 8 chars of user ID, 20% discount, 5% commission
+
+### 10. Workflow Rules
+
+- Letter generation flow: intake → AI draft → pending_review → admin review → approve/reject → subscriber download/email
+- Free trial: first letter free via `letters` count check before requiring subscription
+
+### 11. Extension Rules
+
+- Allowed: new API routes, components, migrations (append-only), validation enhancements
+- Forbidden: moving core directories, replacing shadcn, altering schema without migrations, bypassing RLS, exposing keys, new admin routes outside `/secure-admin-gateway`
+
+### 12. Deployment
+
+- Deploy on Vercel (primary) or Netlify (secondary); database on Supabase
+- Commands: `pnpm build`, `vercel`, Supabase migrations via dashboard SQL editor
+- Stripe webhook endpoint: `https://www.talk-to-my-lawyer.com/api/stripe/webhook`
+
+### 13. Common Issues
+
+- Run `pnpm install` for missing modules
+- Regenerate Supabase types when schema changes
+- Verify roles/policies when RLS blocks
+- Stripe webhook debugging via secrets and CLI logs
+
+### 14. Audit Trail
+
+- All letter status changes must call `log_letter_audit` RPC with action, old/new status, notes
+
+### 15. Contacts & Resources
+
+- Documentation: `/CLAUDE.md`, `/PLATFORM_ARCHITECTURE.md`, `/DATABASE_FUNCTIONS.md`
+- Security: `/SECURITY_CHECKLIST.md`
+- Deployment: `/PRODUCTION_CHECKLIST.md`, `/DEPLOYMENT.md`
+- Live site: https://www.talk-to-my-lawyer.com
+- Last updated December 2025
+
+---
+
 ## Quick Context
 
 **App**: AI-powered legal letter SaaS with mandatory attorney review.  
