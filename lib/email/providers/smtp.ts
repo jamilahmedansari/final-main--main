@@ -1,22 +1,9 @@
 /**
  * SMTP Email Provider
- * Implements email sending using SMTP protocol
+ * Implements email sending using SMTP protocol (compatible with Brevo SMTP)
  */
 
-interface SMTPEmailData {
-  from: string
-  to: string[]
-  cc?: string[]
-  bcc?: string[]
-  subject: string
-  html?: string
-  text?: string
-  attachments?: Array<{
-    filename: string
-    content: Buffer | string
-    contentType?: string
-  }>
-}
+import type { EmailMessage, EmailResult, EmailProviderInterface } from '../types'
 
 interface SMTPConfig {
   host: string
@@ -28,14 +15,31 @@ interface SMTPConfig {
   }
 }
 
-export class SMTPProvider {
+export class SMTPProvider implements EmailProviderInterface {
+  name = 'smtp' as const
   private config: SMTPConfig
+  private fromEmail: string
+  private fromName: string
 
   constructor(config: SMTPConfig) {
     this.config = config
+    this.fromEmail = process.env.EMAIL_FROM || ''
+    this.fromName = process.env.EMAIL_FROM_NAME || 'Talk-To-My-Lawyer'
   }
 
-  async sendEmail(emailData: SMTPEmailData): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  isConfigured(): boolean {
+    return !!(this.config.host && this.config.auth.user && this.config.auth.pass && this.fromEmail)
+  }
+
+  async send(message: EmailMessage): Promise<EmailResult> {
+    if (!this.isConfigured()) {
+      return {
+        success: false,
+        error: 'SMTP is not configured',
+        provider: this.name,
+      }
+    }
+
     try {
       // Using nodemailer for SMTP implementation
       const nodemailer = await import('nodemailer')
@@ -57,18 +61,25 @@ export class SMTPProvider {
       // Verify SMTP connection
       await transporter.verify()
 
+      const from = message.from || { email: this.fromEmail, name: this.fromName }
+      const to = Array.isArray(message.to) ? message.to : [message.to]
+      const cc = message.cc ? (Array.isArray(message.cc) ? message.cc : [message.cc]) : undefined
+      const bcc = message.bcc ? (Array.isArray(message.bcc) ? message.bcc : [message.bcc]) : undefined
+
       const mailOptions = {
-        from: emailData.from,
-        to: emailData.to.join(', '),
-        cc: emailData.cc?.join(', ') || undefined,
-        bcc: emailData.bcc?.join(', ') || undefined,
-        subject: emailData.subject,
-        text: emailData.text,
-        html: emailData.html,
-        attachments: emailData.attachments?.map(attachment => ({
+        from: from.name ? `"${from.name}" <${from.email}>` : from.email,
+        to: to.join(', '),
+        cc: cc?.join(', ') || undefined,
+        bcc: bcc?.join(', ') || undefined,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+        replyTo: message.replyTo,
+        attachments: message.attachments?.map(attachment => ({
           filename: attachment.filename,
           content: attachment.content,
-          contentType: attachment.contentType,
+          encoding: 'base64',
+          contentType: attachment.type,
         })),
       }
 
@@ -79,40 +90,32 @@ export class SMTPProvider {
 
       return {
         success: true,
-        messageId: result.messageId
+        messageId: result.messageId,
+        provider: this.name,
       }
 
     } catch (error) {
       console.error('[SMTP] Email sending failed:', error)
 
+      let errorMessage = error instanceof Error ? error.message : 'Unknown SMTP error occurred'
+
       if (error instanceof Error) {
         // Handle specific SMTP errors
         if (error.message.includes('ECONNREFUSED')) {
-          return {
-            success: false,
-            error: 'Connection refused - check SMTP host and port'
-          }
+          errorMessage = 'Connection refused - check SMTP host and port'
         } else if (error.message.includes('EAUTH')) {
-          return {
-            success: false,
-            error: 'Authentication failed - check username and password'
-          }
+          errorMessage = 'Authentication failed - check username and password'
         } else if (error.message.includes('EHOSTUNREACH')) {
-          return {
-            success: false,
-            error: 'Host unreachable - check SMTP server address'
-          }
+          errorMessage = 'Host unreachable - check SMTP server address'
         } else if (error.message.includes('ETIMEDOUT')) {
-          return {
-            success: false,
-            error: 'Connection timeout - check network and firewall settings'
-          }
+          errorMessage = 'Connection timeout - check network and firewall settings'
         }
       }
 
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown SMTP error occurred'
+        error: errorMessage,
+        provider: this.name,
       }
     }
   }
@@ -238,13 +241,17 @@ export function createSMTPProvider(config: {
 }
 
 /**
- * Default SMTP ports for common providers
+ * Default SMTP ports for common email providers.
+ * Reference for configuring SMTP_PORT environment variable.
+ * - ssl (port 465): Uses implicit TLS (SSL)
+ * - tls (port 587): Uses STARTTLS for encryption
  */
 export const SMTP_PORTS = {
   GMAIL: { ssl: 465, tls: 587 },
   OUTLOOK: { ssl: 587, tls: 587 },
   YAHOO: { ssl: 465, tls: 587 },
   SENDGRID: { ssl: 465, tls: 587 },
+  BREVO: { ssl: 465, tls: 587 },
   AMAZON_SES: { ssl: 465, tls: 587, tls_starttls: 25, tls_implicit: 465 },
   MAILGUN: { ssl: 465, tls: 587 },
   POSTMARK: { ssl: 465, tls: 587 }

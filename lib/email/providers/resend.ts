@@ -3,35 +3,37 @@
  * Implements email sending using Resend API
  */
 
-interface ResendEmailData {
-  from: string
-  to: string[]
-  subject: string
-  html?: string
-  text?: string
-  attachments?: Array<{
-    filename: string
-    content: Buffer | string
-    contentType?: string
-  }>
-}
+import type { EmailMessage, EmailResult, EmailProviderInterface } from '../types'
 
-interface ResendResponse {
-  id: string
-  from: string
-  to: string[]
-  created_at: string
-}
-
-export class ResendProvider {
+export class ResendProvider implements EmailProviderInterface {
+  name = 'resend' as const
   private apiKey: string
   private baseUrl = 'https://api.resend.com'
+  private fromEmail: string
+  private fromName: string
 
   constructor(apiKey: string) {
     this.apiKey = apiKey
+    this.fromEmail = process.env.EMAIL_FROM || ''
+    this.fromName = process.env.EMAIL_FROM_NAME || 'Talk-To-My-Lawyer'
   }
 
-  async sendEmail(emailData: ResendEmailData): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  isConfigured(): boolean {
+    return !!this.apiKey && !!this.fromEmail
+  }
+
+  async send(message: EmailMessage): Promise<EmailResult> {
+    if (!this.isConfigured()) {
+      return {
+        success: false,
+        error: 'Resend is not configured',
+        provider: this.name,
+      }
+    }
+
+    const from = message.from || { email: this.fromEmail, name: this.fromName }
+    const to = Array.isArray(message.to) ? message.to : [message.to]
+
     try {
       const response = await fetch(`${this.baseUrl}/emails`, {
         method: 'POST',
@@ -40,84 +42,69 @@ export class ResendProvider {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: emailData.from,
-          to: emailData.to,
-          subject: emailData.subject,
-          html: emailData.html,
-          text: emailData.text,
-          attachments: emailData.attachments?.map(attachment => ({
+          from: from.name ? `${from.name} <${from.email}>` : from.email,
+          to,
+          subject: message.subject,
+          html: message.html,
+          text: message.text,
+          reply_to: message.replyTo,
+          attachments: message.attachments?.map(attachment => ({
             filename: attachment.filename,
-            content: Buffer.isBuffer(attachment.content)
-              ? attachment.content.toString('base64')
-              : attachment.content,
-            content_type: attachment.contentType || 'application/octet-stream'
+            content: attachment.content,
+            content_type: attachment.type || 'application/octet-stream'
           }))
         }),
       })
 
-      const data: ResendResponse = await response.json()
+      const data = await response.json()
 
       if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${data.message || 'Unknown error'}`
+
         // Handle specific Resend error responses
         if (response.status === 401) {
-          return {
-            success: false,
-            error: 'Invalid API key or authentication failed'
-          }
+          errorMessage = 'Invalid API key or authentication failed'
         } else if (response.status === 403) {
-          return {
-            success: false,
-            error: 'Access forbidden - check your API key permissions'
-          }
+          errorMessage = 'Access forbidden - check your API key permissions'
         } else if (response.status === 422) {
-          return {
-            success: false,
-            error: `Invalid email data: ${data.id || 'Unknown validation error'}`
-          }
+          errorMessage = `Invalid email data: ${data.message || 'Unknown validation error'}`
         } else if (response.status === 429) {
-          return {
-            success: false,
-            error: 'Rate limit exceeded - please try again later'
-          }
-        } else {
-          return {
-            success: false,
-            error: `HTTP ${response.status}: ${data.id || 'Unknown error'}`
-          }
+          errorMessage = 'Rate limit exceeded - please try again later'
+        }
+
+        return {
+          success: false,
+          error: errorMessage,
+          provider: this.name,
         }
       }
 
       return {
         success: true,
-        messageId: data.id
+        messageId: data.id,
+        provider: this.name,
       }
 
     } catch (error) {
       console.error('[Resend] Email sending failed:', error)
 
+      let errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+
       if (error instanceof Error) {
         // Handle network errors
         if (error.message.includes('ECONNREFUSED')) {
-          return {
-            success: false,
-            error: 'Connection refused - check your network connection'
-          }
+          errorMessage = 'Connection refused - check your network connection'
         } else if (error.message.includes('ETIMEDOUT')) {
-          return {
-            success: false,
-            error: 'Request timeout - please try again'
-          }
+          errorMessage = 'Request timeout - please try again'
         } else if (error.message.includes('ENOTFOUND')) {
-          return {
-            success: false,
-            error: 'DNS lookup failed - check the API URL'
-          }
+          errorMessage = 'DNS lookup failed - check the API URL'
         }
       }
 
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: errorMessage,
+        provider: this.name,
       }
     }
   }
@@ -162,7 +149,7 @@ export class ResendProvider {
   /**
    * Get Resend account information
    */
-  async getAccountInfo(): Promise<{ success: boolean; data?: any; error?: string }> {
+  async getAccountInfo(): Promise<{ success: boolean; data?: unknown; error?: string }> {
     try {
       const response = await fetch(`${this.baseUrl}/account`, {
         method: 'GET',
@@ -197,7 +184,7 @@ export class ResendProvider {
   /**
    * Get available domains in Resend account
    */
-  async getDomains(): Promise<{ success: boolean; domains?: any[]; error?: string }> {
+  async getDomains(): Promise<{ success: boolean; domains?: unknown[]; error?: string }> {
     try {
       const response = await fetch(`${this.baseUrl}/domains`, {
         method: 'GET',

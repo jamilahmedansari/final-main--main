@@ -760,6 +760,42 @@ The Talk-To-My-Lawyer Team
       `),
     }
   },
+
+  'admin-alert': (data) => ({
+    subject: `Admin Alert: ${data.alertMessage || 'Action Required'}`,
+    text: `
+    Admin Alert
+
+    ${data.alertMessage || 'An administrative action requires your attention.'}
+
+    Details:
+    ${data.alertDetails || 'Please review the admin dashboard for more information.'}
+
+    Action Required: ${data.actionUrl}
+
+    This is an automated notification for administrators.
+
+    Best regards,
+    Talk-To-My-Lawyer System
+    `.trim(),
+    html: wrapHtml(`
+      <h2>🔔 Admin Alert</h2>
+
+      <div class="highlight">
+        <p><strong>Alert:</strong> ${data.alertMessage || 'An administrative action requires your attention.'}</p>
+      </div>
+
+      ${data.alertDetails ? `<p><strong>Details:</strong> ${data.alertDetails}</p>` : ''}
+
+      <p style="text-align: center;">
+        <a href="${data.actionUrl}" class="button">Review in Dashboard</a>
+      </p>
+
+      <p><small>This is an automated notification for administrators.</small></p>
+
+      <p>Best regards,<br>Talk-To-My-Lawyer System</p>
+    `),
+  }),
 }
 
 export function renderTemplate(template: EmailTemplate, data: TemplateData): TemplateOutput {
