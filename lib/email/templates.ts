@@ -758,7 +758,7 @@ The Talk-To-My-Lawyer Team
 
         <p>Best regards,<br>The Talk-To-My-Lawyer Team</p>
       `),
-    })
+    }
   },
 }
 
