@@ -77,7 +77,8 @@ export class SMTPProvider implements EmailProviderInterface {
         replyTo: message.replyTo,
         attachments: message.attachments?.map(attachment => ({
           filename: attachment.filename,
-          content: Buffer.from(attachment.content, 'base64'),
+          content: attachment.content,
+          encoding: 'base64',
           contentType: attachment.type,
         })),
       }
@@ -240,7 +241,10 @@ export function createSMTPProvider(config: {
 }
 
 /**
- * Default SMTP ports for common providers
+ * Default SMTP ports for common email providers.
+ * Reference for configuring SMTP_PORT environment variable.
+ * - ssl (port 465): Uses implicit TLS (SSL)
+ * - tls (port 587): Uses STARTTLS for encryption
  */
 export const SMTP_PORTS = {
   GMAIL: { ssl: 465, tls: 587 },
